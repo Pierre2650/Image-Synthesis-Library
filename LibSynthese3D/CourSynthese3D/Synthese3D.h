@@ -11,18 +11,22 @@ class Vector3 {
 
 		Vector3(float x, float y, float z);
 
-		Vector3 operator+( Vector3 other);
-		Vector3 operator-(Vector3 other);
-
 		float Magnitude();
 		Vector3 Normalized();
 
+		static bool Equals(Vector3 A, Vector3 B);
+		static float Angle(Vector3 A, Vector3 B);
 
-		Vector3 Dot(Vector3 A, Vector3 B);
-		Vector3 Cross(Vector3 A, Vector3 B);
-		bool Equals(Vector3 B);
+		static float Dot(Vector3 A, Vector3 B);
+		static float Dot(Vector3 A, Vector3 B, float angle);
+		static Vector3 Cross(Vector3 A, Vector3 B);
 
 
+		ostream& operator<<(ostream& os,  Vector3& v);
+		Vector3 operator+(Vector3& other);
+		Vector3 operator-(Vector3& other);
+		Vector3 operator*(float& other);
+		Vector3 operator/(float& other);
 		
 
 	
@@ -31,23 +35,37 @@ class Vector3 {
 class Point : Vector3
 {
 	static float Distance(Point A, Point B);
+	bool operator==(Point& other);
 
 
 
 };
 
-class Direction
+class Direction : Vector3
+{
+	public:
+		Direction(Point A, Point B);
+
+		Point GetPointA();
+		Point GetPointB();
+		float GetTheta();
+
+		bool operator==(Direction& other);
+
+	private:
+		Point A, B;
+		float theta;
+
+
+
+
+};
+
+class Color : Vector3
 {
 	public:
 
-	private:
-
-};
-
-class Color
-{
-public:
-private:
+	bool operator==(Color& other);
 
 };
 
