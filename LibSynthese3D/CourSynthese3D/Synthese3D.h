@@ -47,27 +47,24 @@ class Point : Vector3
 
 };
 
-//class Direction : Vector3
-//{
-//	public:
-//		Direction(Point A, Point B);
-//
-//		Point GetPointA();
-//		Point GetPointB();
-//		float GetTheta();
-//
-//		bool operator==(Direction& other);
-//
-//	private:
-//		Point A, B;
-//		float theta;
-//
-//		Vector3 Init(Point A, Point B);
-//
-//
-//
-//
-//};
+class Direction : Vector3
+{
+	public:
+		Direction(Point A);
+
+		Point GetPoint();
+
+		//bool operator==(Direction& other);
+
+	private:
+		Point A;
+
+		Vector3 Init();
+
+
+
+
+};
 
 
 class Color : Vector3

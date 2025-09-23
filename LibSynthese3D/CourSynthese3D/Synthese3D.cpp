@@ -29,6 +29,7 @@ Vector3::Vector3(const Vector3& B) {
 float Vector3::Magnitude() {
 	return std::sqrt((this->x * this->x) + (this->y * this->y) + (this->z * this->z));
 }
+
 Vector3 Vector3::Normalized() {
 	float mag = this->Magnitude();
 	
@@ -146,21 +147,19 @@ bool Point::operator==(Point& B) {
 
 #pragma region Direction_Class
 
-//Direction::Direction(Point A, Point B) : Vector3(Init(A, B)) {
-//}
-//
-//
-//Vector3 Direction::Init(Point A, Point B) {
-//	return Vector3::Zero;
-//}
-//
-//
-//Point Direction::GetPointA() {
-//	return this->A;
-//}
-//Point Direction::GetPointB() {
-//	return this->B;
-//}
+Direction::Direction(Point A) : Vector3(Init()) {}
+
+
+Vector3 Direction::Init() {
+	//Vector3 result = A / A.Magnitude();
+	return Vector3::Zero;
+}
+
+
+Point Direction::GetPoint() {
+	return this->A;
+}
+
 
 
 #pragma endregion
