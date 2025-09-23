@@ -1,0 +1,7 @@
+﻿  pch.cpp
+  MainSynthese3D.cpp
+  Synthese3D.cpp
+C:\Users\jlarmat\Documents\GitHub\Image-Synthesis-Library\LibSynthese3D\CourSynthese3D\Synthese3D.cpp(73,24): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
+  (compiler le fichier source '/Synthese3D.cpp')
+  
+  CourSynthese3D.vcxproj -> C:\Users\jlarmat\Documents\GitHub\Image-Synthesis-Library\LibSynthese3D\x64\Release\CourSynthese3D.lib
