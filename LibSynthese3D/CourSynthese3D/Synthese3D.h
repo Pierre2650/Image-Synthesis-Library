@@ -7,27 +7,27 @@ class Vector3 {
 		float y;
 		float z;
 
-		static Vector3 Zero;
-		static Vector3 One;
+		static const Vector3 Zero;
+		static const Vector3 One;
+		static const Vector3 NaN;
 
-		Vector3(float x, float y, float z);
+		Vector3(const float x, const float y, const float z);
 		Vector3(const Vector3& B);
 
-		float Magnitude();
-		Vector3 Normalized();
+		float Magnitude() const;
+		Vector3 Normalized () const;
 
-		static bool Equals(Vector3 A, Vector3 B);
-		static float Angle(Vector3 A, Vector3 B);
+		static bool AlmostEqual(const Vector3 A, const Vector3 B);
+		static bool IsNaN(const Vector3 A);
+		static float Angle(const Vector3 A, const Vector3 B);
 
-		static float Dot(Vector3 A, Vector3 B);
-		static float Dot(Vector3 A, Vector3 B, float deg);
-		static float Dot(Vector3 A, Vector3 B, float rad);
-		static Vector3 Cross(Vector3 A, Vector3 B);
+		static float Dot(const Vector3 A, const Vector3 B);
+		static Vector3 Cross(const Vector3 A, const Vector3 B);
 
-		Vector3 operator+(Vector3& other);
-		Vector3 operator-(Vector3& other);
-		Vector3 operator*(float& other);
-		Vector3 operator/(float& other);
+		Vector3 operator+(const Vector3& other) const;
+		Vector3 operator-(const Vector3& other) const;
+		Vector3 operator*(const float& other) const;
+		Vector3 operator/(const float& other) const;
 		
 
 	
@@ -35,44 +35,45 @@ class Vector3 {
 
 std::ostream& operator<<(std::ostream& os, const Vector3& v);
 
-class Point : Vector3
+class Point : public Vector3
 {
 	public:
-		Point(float x, float y, float z);
+		Point(const float x, const float y, const float z);
 
-		static float Distance(Point A, Point B);
-		bool operator==(Point& other);
-
+		static float Distance(const Point A, const Point B);
 
 
 };
 
-class Direction : Vector3
+class Direction : public Vector3
 {
 	public:
-		Direction(Point A);
+		Direction(const Point A);
+		Direction(const Direction& B);
 
-		Point GetPoint();
+		Point GetPoint() const;
 
-		//bool operator==(Direction& other);
 
 	private:
-		Point A;
-
-		Vector3 Init();
+		Point P ;
+		Vector3 Init(const Point A);
 
 
 
 
 };
 
+std::ostream& operator<<(std::ostream& os, const Direction& v);
 
-class Color : Vector3
+class Color : public Vector3
 {
-	public:
+	//values betweens 1 and 0 
+    public:
+		float Transparency;
+		// Enumeration useful colors
 
-		Color(float x, float y, float z);
-		bool operator==(Color& other);
+		Color(float x, float y, float z, float t);
 
 };
 
+std::ostream& operator<<(std::ostream& os, const Color& A);
