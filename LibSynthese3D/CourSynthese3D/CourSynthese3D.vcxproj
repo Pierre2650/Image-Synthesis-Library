@@ -136,10 +136,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="framework.h" />
+    <ClInclude Include="Image.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Synthese3D.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Image.cpp" />
     <ClCompile Include="MainSynthese3D.cpp" />
     <ClCompile Include="Synthese3D.cpp" />
     <ClCompile Include="pch.cpp">
