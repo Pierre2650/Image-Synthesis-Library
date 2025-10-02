@@ -13,6 +13,13 @@ Vector3 const Vector3::One(1, 1, 1);
 Vector3 const Vector3::NaN(NAN, NAN, NAN);
 
 /// ------------- Construct -------------
+
+Vector3::Vector3() {
+	this->x = 0;
+	this->y = 0;
+	this->z = 0;
+}
+
 Vector3::Vector3(const float x, const float y, const float z) {
 	this->x = x;
 	this->y = y;
@@ -72,6 +79,10 @@ float Vector3::Dot(const Vector3 A, const Vector3 B) {
 
 }
 
+float Vector3::Distance(const Vector3 A, const Vector3 B) {
+	//Eucledian
+	return std::sqrt((B.x - A.x) * (B.x - A.x) + (B.y - A.y) * (B.y - A.y) + (B.z - A.z) * (B.z - A.z));
+}
 
 Vector3 Vector3::Cross(const Vector3 A, const Vector3 B) {
 	float Cx = A.y * B.z - A.z * B.y;
@@ -109,56 +120,28 @@ std::ostream& operator<<(std::ostream& os, const Vector3& A) {
 
 
 
-#pragma region Point_Class
 
-Point::Point(const float x, const float y, const float z):Vector3(x,y,z){}
-
-//// ------------- Statcic -------------
-
-
-float Point::Distance(const Point A, const Point B) {
-	//Eucledian
-	return std::sqrt((B.x - A.x)* (B.x - A.x) + (B.y - A.y)* (B.y - A.y) + (B.z - A.z)* (B.z - A.z));
-}
-
-//// ------------- Overrides -------------
-
-
-#pragma endregion
-
-#pragma region Direction_Class
-
-Direction::Direction(const Point A) :  Vector3(Init(A)), P(A) {}
-
-Direction::Direction(const Direction& B) : Vector3(B), P(B.GetPoint()){}
-
-
-Vector3 Direction::Init(const Point A) {
-	Vector3 result = A / A.Magnitude();
-	return result;
-}
-
-
-Point Direction::GetPoint() const {
-	return this->P;
-}
-
-
-std::ostream& operator<<(std::ostream& os, const Direction& A) {
-	os << "(" << A.x << ", " << A.y << ", " << A.z << ")" << " Point: " << A.GetPoint();
-	return os;
-}
-
-
-
-#pragma endregion
 
 
 #pragma region Color_Class
 
+Color::Color() {
+	this->x = Vector3::NaN.x;
+	this->y = Vector3::NaN.y;
+	this->z = Vector3::NaN.z;
+	this->Transparency = 0;
+}
+
 Color::Color(float x, float y, float z,  float t) : Vector3(x, y, z) {
 	this->Transparency = t;
 }
+
+/// ------------- Var -------------
+Color const Color::Red(255, 0, 0,1);
+Color const Color::Green(0, 255, 0,1);
+Color const Color::Blue(0, 0, 255,1);
+Color const Color::Black(0, 0, 0,1);
+Color const Color::White(255, 255, 255,1);
 
 //// ------------- Overrides -------------
 
@@ -169,4 +152,9 @@ std::ostream& operator<<(std::ostream& os, const Color& A) {
 
 #pragma endregion
 
+
+Rayon::Rayon(Vector3 origin, Vector3 direction) {
+	this->origin = origin;
+	this->direction = direction;
+}
 	 
