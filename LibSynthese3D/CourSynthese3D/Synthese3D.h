@@ -58,10 +58,13 @@ class Color : public Vector3
 
 std::ostream& operator<<(std::ostream& os, const Color& A);
 
-class Rayon {
-	Vector3 origin;
-	Vector3 direction;
+class Ray {
 
 	public:
-		Rayon(Vector3 origin, Vector3 direction);
+		Vector3 origin;
+		Vector3 direction;
+
+		Ray();
+		Ray(Vector3 origin, Vector3 direction);
+
 };

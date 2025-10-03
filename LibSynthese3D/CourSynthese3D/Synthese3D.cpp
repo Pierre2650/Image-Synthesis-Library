@@ -152,8 +152,12 @@ std::ostream& operator<<(std::ostream& os, const Color& A) {
 
 #pragma endregion
 
+Ray::Ray() {
+	this->origin = Vector3::NaN;
+	this->direction = Vector3::NaN;
+}
 
-Rayon::Rayon(Vector3 origin, Vector3 direction) {
+Ray::Ray(Vector3 origin, Vector3 direction) {
 	this->origin = origin;
 	this->direction = direction;
 }

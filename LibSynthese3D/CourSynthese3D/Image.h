@@ -2,20 +2,21 @@
 #include <iostream>
 #include <vector>
 #include <fstream>  // for ofstream
+#include "Synthese3D.h"
 
 class Image {
 public:
-	std::string format = "";
+	std::string format = "P3";
 	std::string comment = "# ";
 	
 	int width, height;
 	
-	std::vector<std::vector<int>> Matrix;
+	std::vector<std::vector<Color>> Matrix;
 
-	Image( int width, int height);
-	Image(std::string format, int width, int height);
-	Image(std::string format, std::string comment,int width, int height);
+	Image( int width, int height, std::vector<std::vector<Color>> Matrix);
+	Image( std::string comment, int width, int height, std::vector<std::vector<Color>> Matrix);
 
-    void WritePBM(std::string path, std::vector<std::vector<int>> Matrix );
+    void WriteImage(std::string path);
+
 
 };

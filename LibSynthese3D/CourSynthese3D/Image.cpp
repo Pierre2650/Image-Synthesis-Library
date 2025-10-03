@@ -6,32 +6,41 @@
 #include <vector>
 #include <iostream>
 #include <fstream>  // for ofstream
-
+#include "Synthese3D.h"
 
 
 /// ------------- Construct -------------
 
-Image::Image( int width, int height) {
-    this->width = width;
-    this->height = height;
+Image::Image( int width, int height, std::vector<std::vector<Color>> Matrix) {
 
-}
+    /*try {
 
-Image::Image(std::string format, int width, int height) {
-	this->format = format;
+        if (Matrix.size() != height || Matrix[0].size() != width) {
+            throw std::runtime_error("Image Matrix doesnt fit Image resolution");
+        }
+    }
+    catch (const std::runtime_error& e) {
+        std::cout << "Caught a runtime_error: " << e.what() << std::endl;
+        return;
+    }*/
+
 	this->width = width;
 	this->height = height;
+    this->Matrix = Matrix;
 }
 
-Image::Image(std::string format, std::string comment, int width, int height) {
-	this->format = format;
+Image::Image(std::string comment, int width, int height, std::vector<std::vector<Color>> Matrix){
+
 	this->comment = comment;
 	this->width = width;
 	this->height = height;
+    this->Matrix = Matrix;
 }
 
-void Image::WritePBM(std::string path , std::vector<std::vector<int>> Matrix ) {
-    path += "/PBM_Test.pbm";
+void Image::WriteImage(std::string path) {
+    //Check width and height?
+
+    path += "/PBM_Test.ppm";
 
     std::ofstream outfile(path);
 
@@ -44,23 +53,15 @@ void Image::WritePBM(std::string path , std::vector<std::vector<int>> Matrix ) {
     outfile << this->format <<"\n";
     outfile << this->comment << "\n";
     outfile << this->width << " "<< this->height << "\n";
+    outfile << "255\n";
 
     for (int i = 0; i < this->height; i++) {
 
         for (int j = 0; j < this->width; j++) {
-            outfile << Matrix[i][j];
+            outfile << Matrix[i][j].x << " " << Matrix[i][j].y << " " << Matrix[i][j].z << "  ";
         }
-
+        outfile << "\n";
     }
-
-    // Write to the file
-
-    /*outfile << "Hello, this is a test.\n";
-    outfile << "\n";
-    outfile << "Writing numbers: " << 123 << "\n";
-    outfile << "Writing more text into the file.\n";*/
-
-    // Always close the file
     outfile.close();
 
 }
