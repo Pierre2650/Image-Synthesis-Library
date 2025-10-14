@@ -132,6 +132,10 @@ Color::Color() {
 	this->Transparency = 0;
 }
 
+Color::Color(float x, float y, float z) : Vector3(x, y, z) {
+	this->Transparency = 1;
+}
+
 Color::Color(float x, float y, float z,  float t) : Vector3(x, y, z) {
 	this->Transparency = t;
 }

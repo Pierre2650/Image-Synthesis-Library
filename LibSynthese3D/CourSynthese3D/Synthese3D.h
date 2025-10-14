@@ -52,6 +52,7 @@ class Color : public Vector3
 		float Transparency;
 		// Enumeration useful colors
 		Color();
+		Color(float x, float y, float z);
 		Color(float x, float y, float z, float t);
 
 };
