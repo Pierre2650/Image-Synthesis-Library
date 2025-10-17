@@ -10,21 +10,35 @@
 
 
 
-class sphere
+class Sphere
 {
 public:
     Vector3 origin;
     float rayon;
+    Color color;
 
-    sphere(Vector3 origine, float rayon) {
+    Sphere(Vector3 origine, float rayon, Color col) {
         this->origin = origine;
         this->rayon = rayon;
+        this->color = col;
     }
 
 };
 
+class Light {
+public:
+    Vector3 position;
+    float intensity;
 
-Vector3 CalculateRaySphereIntersection(Ray ray, sphere sph) {
+    Light(Vector3 pos, float intense) {
+        this->position = pos;
+        this->intensity = intense;
+    }
+};
+
+
+
+float CalculateRaySphereIntersection(Ray ray, Sphere sph ) {
 
     //Analytic sol
 
@@ -53,14 +67,15 @@ Vector3 CalculateRaySphereIntersection(Ray ray, sphere sph) {
 
     if (delta < 0)
     {
-        return Vector3::NaN;
+        //return Vector3::NaN;
+        return NAN;
     }
     else
     {
         float t1 = (-b - std::sqrt(delta)) / (2 * a);
         float t2 = (-b + std::sqrt(delta)) / (2 * a);
 
-        if (t1 > t2)
+        if (t1 < t2)
         {
             t = t1;
         }
@@ -71,45 +86,132 @@ Vector3 CalculateRaySphereIntersection(Ray ray, sphere sph) {
 
     if (t < 0)
     {
-        return  Vector3::NaN;
+        //return  Vector3::NaN;
+        return NAN;
 
     }
     else {
-        return  ray.origin + ray.direction * t;
+        //return  ray.origin + ray.direction * t;
+        
+        return t;
     }
 
+}
+
+Color toneMap(float t, Sphere sph, float maxD) {
+   //1.A formula for mapping from[0, ∞) to[0, 1]
+   //2.A method of applying this to the color.
+
+
+    float tone = 1 - t / maxD;
+    
+    //float tone = t/ t + Sph.rayon;
+    //float tone = pixelDistance/ maxDistance;
+    //std::cout << "tone =  " << tone << std::endl;
+    float x = tone * sph.color.x;
+    float y = tone * sph.color.y;
+    float z = tone * sph.color.z;
+
+    if (x > sph.color.x) { sph.color.x; }
+   if (y > sph.color.y) { y = sph.color.y; }
+   if (z > sph.color.z) { z = sph.color.z; }
+   
+
+    Color res(x, y, z);
+
+    return res;
+}
+
+Color toneMap2(float t, Sphere Sph, Ray ray) {
+    
+    Vector3 rayHit = ray.origin + ray.direction * t ;
+
+    //surface normal N
+    Vector3 N = (rayHit - ray.origin) / Sph.rayon;
+
+   //the amount of illumination at a point depends on how directly that surface faces the camera(or the light).
+   //That’s given by the dot product between the light direction and the surface normal :
+    // Brigness factor I
+
+    float I = Vector3::Dot(N, -ray.direction);
+    float tone = 0;
+    //std::cout << "tone =  " << tone << std::endl;
+    float x = tone * Sph.color.x;
+    float y = tone * Sph.color.y;
+    float z = tone * Sph.color.z;
+
+    //if (x > SphColor.x) { x = SphColor.x; }
+     //if (y > SphColor.y) { y = SphColor.y; }
+    // if (z > SphColor.z) { z = SphColor.z; }
+
+
+    Color res(x, y, z);
+
+    return res;
 }
 
 
 
 int main()
 {
-    
 
    int w = 1000, h = 1000;
    std::vector<std::vector<Color>> mat(h, std::vector<Color>(w));
+   for (int i = 0; i < h; i++) {
 
-   sphere aSphere(Vector3(3, 6, 4), 100);
-   Vector3 camera(0, 0, 0);
+       for (int j = 0; j < w; j++) {
+           mat[i][j] = Color::Black;
+       }
+   }
+
+   float focale = 1000;
+ 
+   Sphere CenterSphere(Vector3(w / 2, h / 2, 1500), 300, Color::Red);
+   Sphere bSphere(Vector3(100, 0, 2000), 300, Color::Blue);
+   Sphere cSphere(Vector3(1000, 1000, 2000), 100, Color::Green);
+   Sphere backGround(Vector3(w / 2, h / 2, 2600), 1200, Color(192, 192, 192));
+   Sphere floor(Vector3(w/2, h + 1000, 2100), 1000, Color(75, 0, 130));
+   Sphere ceiling(Vector3(w / 2, -1000, 2100), 1000, Color(230, 230, 250));
+   Sphere RWall(Vector3(w + 1100, h / 2, 1800), 1000, Color(0, 206, 209));
+   Sphere LWall(Vector3(-1100, h / 2, 1800), 1000 ,Color(0, 206, 209));
+   Sphere spheres[] = { CenterSphere, bSphere, cSphere, backGround ,ceiling, floor , RWall,LWall};
+   int nbSpheres = 8;
+
+   float maxD = 3000;
+
+   Vector3 camera(w/2, h/2, 0);
+
 
    for (int i = 0; i < h; i++) {
 
       for (int j = 0; j < w; j++) {
-          Vector3 pixelPos(j, i, -1);
+
+          Vector3 pixelPos(j, i, focale);
           Vector3 rayDir = (pixelPos - camera).Normalized();
           Ray aRay(camera, rayDir);
 
-          Vector3 Intersection = CalculateRaySphereIntersection(aRay, aSphere);
 
-          if (Vector3::IsNaN(Intersection)) {
-              mat[i][j] = Color::Black;
-          }
-          else
+          float min = 99999999999;
+
+          float res = 0;
+          for (int k = 0; k < nbSpheres; k++)
           {
-              mat[i][j] = Color::Blue;
-          }
 
-         //mat[i][j] = Color::White; // a test
+              if (!std::isnan(res = CalculateRaySphereIntersection(aRay, spheres[k])))
+              {
+                  
+                  if (res < min) {
+
+                      min = res;
+                      Color Mapped = toneMap(res, spheres[k], maxD);
+                      mat[i][j] = Mapped;
+                  }
+
+              }
+          }
+         
+
+          
       }
    }
 
@@ -147,7 +249,7 @@ void GeometricSolutionRaytrace() {
 
     Ray camRay(Vector3(1, 1, 0), Vector3(1, 0.5, 0));
 
-    sphere Sph(Vector3(4, 4, 0), 1);
+    Sphere Sph(Vector3(4, 4, 0), 1, Color::White);
 
     // Geometric sol to raytrace a sphere
 
@@ -197,7 +299,7 @@ void GeometricSolutionRaytrace() {
 }
 
 void TestDrawCircle(std::vector<std::vector<Color>> mat) {
-    sphere sph(Vector3(32, 32, 0), 5);
+    Sphere sph(Vector3(32, 32, 0), 5, Color::White);
 
     double PI = 2 * acos(0.0);
 
