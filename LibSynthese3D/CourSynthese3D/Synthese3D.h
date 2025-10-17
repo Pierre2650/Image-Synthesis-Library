@@ -28,8 +28,11 @@ class Vector3 {
 
 		Vector3 operator+(const Vector3& other) const;
 		Vector3 operator-(const Vector3& other) const;
+		Vector3 operator-() const; 
 		Vector3 operator*(const float& other) const;
 		Vector3 operator/(const float& other) const;
+		friend Vector3 operator*(const float& scalar, const Vector3& vec);
+		friend Vector3 operator/(const float& scalar, const Vector3& vec);
 		
 
 	
@@ -54,6 +57,9 @@ class Color : public Vector3
 		Color();
 		Color(float x, float y, float z);
 		Color(float x, float y, float z, float t);
+
+	private:
+		Vector3 Clamp(float x, float y, float z);
 
 };
 

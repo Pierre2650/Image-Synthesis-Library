@@ -102,6 +102,10 @@ Vector3 Vector3::operator-(const Vector3& other) const {
 	return Vector3(x - other.x, y - other.y, z - other.z);
 }
 
+Vector3 Vector3::operator-() const {
+	return Vector3(-x, -y, -z);
+}
+
 Vector3 Vector3::operator*(const float& other) const {
 	return  Vector3(x * other, y * other, z * other);
 }
@@ -113,6 +117,15 @@ Vector3 Vector3::operator/(const float& other) const {
 std::ostream& operator<<(std::ostream& os, const Vector3& A) {
 	os << "(" << A.x << ", " << A.y << ", " << A.z << ")";
 	return os;
+}
+
+Vector3 operator*(const float& scalar, const Vector3& vec) {
+	return Vector3(vec.x * scalar, vec.y * scalar, vec.z * scalar);
+}
+
+
+Vector3 operator/(const float& scalar, const Vector3& vec) {
+	return Vector3(scalar / vec.x, scalar / vec.y, scalar / vec.z);
 }
 
 
@@ -132,12 +145,24 @@ Color::Color() {
 	this->Transparency = 0;
 }
 
-Color::Color(float x, float y, float z) : Vector3(x, y, z) {
+Color::Color(float x, float y, float z) : Vector3(x,y,z) {
 	this->Transparency = 1;
 }
 
 Color::Color(float x, float y, float z,  float t) : Vector3(x, y, z) {
 	this->Transparency = t;
+}
+
+Vector3 Color::Clamp(float x, float y, float z) {
+	if (x > 255) { x = 255; }
+	if (x < 0) { x = 0; }
+	if (y > 255) { y = 255; }
+	if (y < 0) { y = 0; }
+	if (z > 255) { z = 255; }
+	if (z < 0) { z = 0; }
+
+	Vector3 result(x, y, z);
+	return result;
 }
 
 /// ------------- Var -------------
