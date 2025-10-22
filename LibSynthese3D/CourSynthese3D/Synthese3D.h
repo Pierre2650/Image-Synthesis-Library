@@ -33,6 +33,7 @@ class Vector3 {
 		Vector3 operator/(const float& other) const;
 		friend Vector3 operator*(const float& scalar, const Vector3& vec);
 		friend Vector3 operator/(const float& scalar, const Vector3& vec);
+		Vector3& operator+=(const Vector3& other);
 		
 
 	
@@ -55,6 +56,7 @@ class Color : public Vector3
 		float Transparency;
 		// Enumeration useful colors
 		Color();
+		Color(Vector3 A);
 		Color(float x, float y, float z);
 		Color(float x, float y, float z, float t);
 

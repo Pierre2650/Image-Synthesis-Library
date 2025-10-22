@@ -29,7 +29,7 @@ class Light {
 public:
     Vector3 position;
     float intensity;
-
+    Color color;
     Light(Vector3 pos, float intense) {
         this->position = pos;
         this->intensity = intense;
@@ -98,55 +98,69 @@ float CalculateRaySphereIntersection(Ray ray, Sphere sph ) {
 
 }
 
-Color toneMap(float t, Sphere sph, float maxD) {
+float toneMap(float t, float maxD) {
    //1.A formula for mapping from[0, ∞) to[0, 1]
    //2.A method of applying this to the color.
 
 
     float tone = 1 - t / maxD;
-    
-    //float tone = t/ t + Sph.rayon;
-    //float tone = pixelDistance/ maxDistance;
-    //std::cout << "tone =  " << tone << std::endl;
-    float x = tone * sph.color.x;
-    float y = tone * sph.color.y;
-    float z = tone * sph.color.z;
 
-    if (x > sph.color.x) { sph.color.x; }
-   if (y > sph.color.y) { y = sph.color.y; }
-   if (z > sph.color.z) { z = sph.color.z; }
-   
-
-    Color res(x, y, z);
-
-    return res;
+    return tone;
 }
 
-Color toneMap2(float t, Sphere Sph, Ray ray) {
+Color light_Transport(Light* lsSource, int nbLights, Sphere sph,Ray camRay,  float t ) {
     
-    Vector3 rayHit = ray.origin + ray.direction * t ;
+   // L_o = L_e + V(P, L_p) * L_emit / D ^ 2 * Albedo * | N . L_i |
+    // L_o --> ligth form surface
+    // L_e --> light emited by surface
+    // L_i --> light incoming to the surface
 
-    //surface normal N
-    Vector3 N = (rayHit - ray.origin) / Sph.rayon;
+    // V(P,L_p) --> visibility of point light
+    // L_emit --> Quantity of light emited by the light >= 0
+    // 1/ D^2 --> distance to light
+    // Albedo --> quantity of light transfered by surface ( "Color of surface"),  0 and 1
+    //N --> Normal to the surface 
 
-   //the amount of illumination at a point depends on how directly that surface faces the camera(or the light).
-   //That’s given by the dot product between the light direction and the surface normal :
-    // Brigness factor I
+    //intersection P->O + tD
 
-    float I = Vector3::Dot(N, -ray.direction);
-    float tone = 0;
-    //std::cout << "tone =  " << tone << std::endl;
-    float x = tone * Sph.color.x;
-    float y = tone * Sph.color.y;
-    float z = tone * Sph.color.z;
+    Vector3 rayIntersec = camRay.origin + camRay.direction * t;
 
-    //if (x > SphColor.x) { x = SphColor.x; }
-     //if (y > SphColor.y) { y = SphColor.y; }
-    // if (z > SphColor.z) { z = SphColor.z; }
+    float L_e = 0;
+    float V = 1;
+    Color albedo = sph.color;
+    Vector3 N = (rayIntersec - sph.origin).Normalized();
 
+    Vector3 calculation(Vector3::Zero);
+
+    for (int i = 0; i < nbLights; i++) {
+        float L_emit = lsSource[0].intensity;
+        float D = Vector3::Distance(rayIntersec, lsSource[0].position);
+        Vector3 L_i = (lsSource[0].position - rayIntersec).Normalized();
+
+        calculation += ((L_e + V) * (L_emit / (D * D)) * albedo * std::max(0.f, Vector3::Dot(N, L_i)));
+    }
+
+    Color L_o(calculation);
+
+    float L_emit = lsSource[0].intensity;
+    float D = Vector3::Distance(rayIntersec, lsSource[0].position);
+    Vector3 L_i = (lsSource[0].position - rayIntersec).Normalized();
+
+    Color L_o((L_e + V) * (L_emit / (D * D)) * albedo * std::max(0.f,Vector3::Dot(N, L_i)));
+
+    //std::cout << "l_O = " << L_o << std::endl;
+
+    float x = L_o.x * sph.color.x ; 
+    float y = L_o.y * sph.color.y ;
+    float z = L_o.z * sph.color.z ;
+
+ 
+
+    if (x > sph.color.x) { x = sph.color.x; }
+    if (y > sph.color.y) { y = sph.color.y; }
+    if (z > sph.color.z) { z = sph.color.z; }
 
     Color res(x, y, z);
-
     return res;
 }
 
@@ -164,22 +178,34 @@ int main()
        }
    }
 
-   float focale = 1000;
  
-   Sphere CenterSphere(Vector3(w / 2, h / 2, 1500), 300, Color::Red);
-   Sphere bSphere(Vector3(100, 0, 2000), 300, Color::Blue);
-   Sphere cSphere(Vector3(1000, 1000, 2000), 100, Color::Green);
-   Sphere backGround(Vector3(w / 2, h / 2, 2600), 1200, Color(192, 192, 192));
-   Sphere floor(Vector3(w/2, h + 1000, 2100), 1000, Color(75, 0, 130));
-   Sphere ceiling(Vector3(w / 2, -1000, 2100), 1000, Color(230, 230, 250));
-   Sphere RWall(Vector3(w + 1100, h / 2, 1800), 1000, Color(0, 206, 209));
-   Sphere LWall(Vector3(-1100, h / 2, 1800), 1000 ,Color(0, 206, 209));
+   Sphere CenterSphere(Vector3(w / 2, h / 2 + 200, 1300), 100, Color::Red);
+   Sphere bSphere(Vector3(200, 300, 1500), 150, Color::Blue);
+   Sphere cSphere(Vector3(800, 800, 1400), 70, Color::Green);
+
+   Sphere backGround(Vector3(w / 2, h / 2, 3100), 1600, Color(192, 192, 192));
+
+   Sphere floor(Vector3(w/2, h + 1600, 2100), 1600, Color(75, 0, 130));
+   Sphere ceiling(Vector3(w / 2, -1600, 2100), 1600, Color(230, 230, 250));
+
+   Sphere RWall(Vector3(w + 1600, h / 2, 2100), 1600, Color(0, 206, 209));
+   Sphere LWall(Vector3(-1600, h / 2, 2100), 1600 ,Color(0, 206, 209));
+
    Sphere spheres[] = { CenterSphere, bSphere, cSphere, backGround ,ceiling, floor , RWall,LWall};
    int nbSpheres = 8;
 
-   float maxD = 3000;
+   float maxD = 3100;
+   float focale = 1000;
+
+   Light aLight(Vector3(w / 2, h / 2, 1000), 1500);
+
+   Light bLight(Vector3(100, 100, 1000), 1500);
+   Light cLight(Vector3(w - 100, h -100, 1000), 1500);
+   Light dLight(Vector3(w / 2, 0, 1500), 1500);
+   Light lights[] = { aLight, bLight, cLight, dLight};
 
    Vector3 camera(w/2, h/2, 0);
+
 
 
    for (int i = 0; i < h; i++) {
@@ -203,8 +229,9 @@ int main()
                   if (res < min) {
 
                       min = res;
-                      Color Mapped = toneMap(res, spheres[k], maxD);
-                      mat[i][j] = Mapped;
+                      float toneDeep = toneMap(res, maxD);
+                      Color lighted = light_Transport(lights, 4 ,spheres[k], aRay, res);
+                      mat[i][j] = lighted;
                   }
 
               }
@@ -216,22 +243,7 @@ int main()
    }
 
   
-   //// a test of printing a J
-   ////--------- J -------
-  /* mat[0][4] = Color::Red;
-   mat[1][4] = Color::Red;
-   mat[2][4] = Color::Red;
-   mat[3][4] = Color::Red;
-   mat[4][4] = Color::Red;
-   mat[5][4] = Color::Red;
-   mat[6][4] = Color::Red;
 
-   mat[6][0] = Color::Red;
-
-   mat[7][1] = Color::Red;
-   mat[7][2] = Color::Red;
-   mat[7][3] = Color::Red;*/
-   ////-------------------
 
    Image img(w, h, mat);
 

@@ -128,6 +128,13 @@ Vector3 operator/(const float& scalar, const Vector3& vec) {
 	return Vector3(scalar / vec.x, scalar / vec.y, scalar / vec.z);
 }
 
+Vector3& Vector3::operator+=(const Vector3& other) {
+	x += other.x;
+	y += other.y;
+	z += other.z;
+	return *this;
+}
+
 
 #pragma endregion
 
@@ -143,6 +150,10 @@ Color::Color() {
 	this->y = Vector3::NaN.y;
 	this->z = Vector3::NaN.z;
 	this->Transparency = 0;
+}
+
+Color::Color(Vector3 A) : Vector3(A) {
+	this->Transparency = 1;
 }
 
 Color::Color(float x, float y, float z) : Vector3(x,y,z) {
