@@ -47,6 +47,7 @@ void Image::WriteImage(std::string path) {
     // Check if the file opened successfully
     if (!outfile) {
         std::cout << "Error opening file!" << std::endl;
+        std::cout << "path: " << path << std::endl;
         return;
     }
 

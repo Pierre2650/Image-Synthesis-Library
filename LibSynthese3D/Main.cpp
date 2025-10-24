@@ -1,5 +1,6 @@
-// Test_Lib_Synthese3D.cpp : Ce fichier contient la fonction 'main'. L'exécution du programme commence et se termine à cet endroit.
+﻿// Image Synthesis Main.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
+
 
 #include <iostream>
 #include <vector>
@@ -9,6 +10,14 @@
 
 
 
+class Material {
+public:
+    Vector3 L_e ;
+
+    Material(Vector3 LightEmited) {
+        this->L_e = LightEmited;
+    }
+};
 
 class Sphere
 {
@@ -30,15 +39,18 @@ public:
     Vector3 position;
     float intensity;
     Color color;
-    Light(Vector3 pos, float intense) {
+    Light(Vector3 pos, Color col,float intense) {
         this->position = pos;
+        this->color = col;
         this->intensity = intense;
     }
 };
 
 
 
-float CalculateRaySphereIntersection(Ray ray, Sphere sph ) {
+
+
+float CalculateRaySphereIntersection(Ray ray, Sphere sph) {
 
     //Analytic sol
 
@@ -53,7 +65,6 @@ float CalculateRaySphereIntersection(Ray ray, Sphere sph ) {
 
     float t = 0;
 
-    //chatgp test 
     Vector3 oc = ray.origin - sph.origin;
 
     float a = Vector3::Dot(ray.direction, ray.direction);
@@ -92,15 +103,15 @@ float CalculateRaySphereIntersection(Ray ray, Sphere sph ) {
     }
     else {
         //return  ray.origin + ray.direction * t;
-        
+
         return t;
     }
 
 }
 
 float toneMap(float t, float maxD) {
-   //1.A formula for mapping from[0, ∞) to[0, 1]
-   //2.A method of applying this to the color.
+    //1.A formula for mapping from[0, ∞) to[0, 1]
+    //2.A method of applying this to the color.
 
 
     float tone = 1 - t / maxD;
@@ -108,57 +119,66 @@ float toneMap(float t, float maxD) {
     return tone;
 }
 
-Color light_Transport(Light* lsSource, int nbLights, Sphere sph,Ray camRay,  float t ) {
-    
-   // L_o = L_e + V(P, L_p) * L_emit / D ^ 2 * Albedo * | N . L_i |
-    // L_o --> ligth form surface
-    // L_e --> light emited by surface
-    // L_i --> light incoming to the surface
+Color light_Transport(Light* LSource, int nbLights, int sphIndex, Sphere* sphs, int nbSph, Vector3 rayIntersec) {
 
-    // V(P,L_p) --> visibility of point light
-    // L_emit --> Quantity of light emited by the light >= 0
-    // 1/ D^2 --> distance to light
-    // Albedo --> quantity of light transfered by surface ( "Color of surface"),  0 and 1
-    //N --> Normal to the surface 
+    // L_o = L_e + V(P, L_p) * L_emit / D ^ 2 * Albedo * | N . L_i |
+     // L_o --> light form surface
+     // L_e --> light emited by surface
+     // L_i --> light incoming to the surface
 
-    //intersection P->O + tD
+     // V(P,L_p) --> visibility of point light
+     // L_emit --> Quantity of light emited by the light >= 0
+     // 1/ D^2 --> distance to light
+     // Albedo --> quantity of light transfered by surface ( "Color of surface"),  0 and 1
+     //N --> Normal to the surface 
 
-    Vector3 rayIntersec = camRay.origin + camRay.direction * t;
+     //intersection P->O + tD
 
-    float L_e = 0;
-    float V = 1;
-    Color albedo = sph.color;
-    Vector3 N = (rayIntersec - sph.origin).Normalized();
-
+    Vector3 N = (rayIntersec - sphs[sphIndex].origin).Normalized();
     Vector3 calculation(Vector3::Zero);
+    Vector3 L_e = Vector3::Zero;
+    Color albedo = sphs[sphIndex].color;
 
     for (int i = 0; i < nbLights; i++) {
-        float L_emit = lsSource[0].intensity;
-        float D = Vector3::Distance(rayIntersec, lsSource[0].position);
-        Vector3 L_i = (lsSource[0].position - rayIntersec).Normalized();
+        float V = 1;
+        Vector3 L_i = (LSource[i].position - rayIntersec).Normalized();
+        Ray toLight(rayIntersec, L_i);
+        //float t = CalculateRaySphereIntersection(toSphere, sphs[sphIndex]);
+        float Test = 0;
 
-        calculation += ((L_e + V) * (L_emit / (D * D)) * albedo * std::max(0.f, Vector3::Dot(N, L_i)));
+        for (int k = 0; k < nbSph; k++) {
+
+            if (k == sphIndex) { continue; }
+
+            if (!std::isnan(Test = CalculateRaySphereIntersection(toLight, sphs[k]))) {
+               
+                V = 0.0f;
+                break;
+                
+            }
+        }
+
+
+        float L_emit = LSource[i].intensity;
+        float D = Vector3::Distance(rayIntersec, LSource[i].position);
+
+        calculation +=   V * (L_emit / (D * D)) * albedo * std::max(0.f, Vector3::Dot(N, L_i));
+
+        calculation.x = calculation.x * (LSource[i].color.x / 255);
+        calculation.y = calculation.y * (LSource[i].color.y / 255);
+        calculation.z = calculation.z * (LSource[i].color.z / 255);
     }
 
-    Color L_o(calculation);
+    Color L_o( L_e + calculation);
 
-    float L_emit = lsSource[0].intensity;
-    float D = Vector3::Distance(rayIntersec, lsSource[0].position);
-    Vector3 L_i = (lsSource[0].position - rayIntersec).Normalized();
+    float x = L_o.x *sphs[sphIndex].color.x;
+    float y = L_o.y *sphs[sphIndex].color.y;
+    float z = L_o.z *sphs[sphIndex].color.z;
 
-    Color L_o((L_e + V) * (L_emit / (D * D)) * albedo * std::max(0.f,Vector3::Dot(N, L_i)));
 
-    //std::cout << "l_O = " << L_o << std::endl;
-
-    float x = L_o.x * sph.color.x ; 
-    float y = L_o.y * sph.color.y ;
-    float z = L_o.z * sph.color.z ;
-
- 
-
-    if (x > sph.color.x) { x = sph.color.x; }
-    if (y > sph.color.y) { y = sph.color.y; }
-    if (z > sph.color.z) { z = sph.color.z; }
+    if (x > sphs[sphIndex].color.x) { x = sphs[sphIndex].color.x; }
+    if (y > sphs[sphIndex].color.y) { y = sphs[sphIndex].color.y; }
+    if (z > sphs[sphIndex].color.z) { z = sphs[sphIndex].color.z; }
 
     Color res(x, y, z);
     return res;
@@ -169,85 +189,93 @@ Color light_Transport(Light* lsSource, int nbLights, Sphere sph,Ray camRay,  flo
 int main()
 {
 
-   int w = 1000, h = 1000;
-   std::vector<std::vector<Color>> mat(h, std::vector<Color>(w));
-   for (int i = 0; i < h; i++) {
+    int w = 1000, h = 1000;
+    std::vector<std::vector<Color>> mat(h, std::vector<Color>(w));
+    for (int i = 0; i < h; i++) {
 
-       for (int j = 0; j < w; j++) {
-           mat[i][j] = Color::Black;
-       }
-   }
-
- 
-   Sphere CenterSphere(Vector3(w / 2, h / 2 + 200, 1300), 100, Color::Red);
-   Sphere bSphere(Vector3(200, 300, 1500), 150, Color::Blue);
-   Sphere cSphere(Vector3(800, 800, 1400), 70, Color::Green);
-
-   Sphere backGround(Vector3(w / 2, h / 2, 3100), 1600, Color(192, 192, 192));
-
-   Sphere floor(Vector3(w/2, h + 1600, 2100), 1600, Color(75, 0, 130));
-   Sphere ceiling(Vector3(w / 2, -1600, 2100), 1600, Color(230, 230, 250));
-
-   Sphere RWall(Vector3(w + 1600, h / 2, 2100), 1600, Color(0, 206, 209));
-   Sphere LWall(Vector3(-1600, h / 2, 2100), 1600 ,Color(0, 206, 209));
-
-   Sphere spheres[] = { CenterSphere, bSphere, cSphere, backGround ,ceiling, floor , RWall,LWall};
-   int nbSpheres = 8;
-
-   float maxD = 3100;
-   float focale = 1000;
-
-   Light aLight(Vector3(w / 2, h / 2, 1000), 1500);
-
-   Light bLight(Vector3(100, 100, 1000), 1500);
-   Light cLight(Vector3(w - 100, h -100, 1000), 1500);
-   Light dLight(Vector3(w / 2, 0, 1500), 1500);
-   Light lights[] = { aLight, bLight, cLight, dLight};
-
-   Vector3 camera(w/2, h/2, 0);
+        for (int j = 0; j < w; j++) {
+            mat[i][j] = Color::Black;
+        }
+    }
 
 
+    Sphere CenterSphere(Vector3(w / 2, h / 2 , 1300), 100, Color::White);
+    Sphere CenterDownSphere(Vector3(w / 2, h / 2 + 250, 1300), 100, Color(255, 215, 0,1));
+    Sphere bSphere(Vector3(200, 300, 1500), 150, Color::Blue);
+    Sphere cSphere(Vector3(800, 800, 1400), 70, Color::Green);
 
-   for (int i = 0; i < h; i++) {
+    Sphere backGround(Vector3(w / 2, h / 2, 3100), 1600, Color(192, 192, 192));
+    Sphere floor(Vector3(w / 2, h + 1600, 2100), 1600, Color(75, 0, 130));
+    Sphere ceiling(Vector3(w / 2, -1600, 2100), 1600, Color(230, 230, 250));
+    Sphere RWall(Vector3(w + 1600, h / 2, 2100), 1600, Color(0, 206, 209));
+    Sphere LWall(Vector3(-1600, h / 2, 2100), 1600, Color(0, 206, 209));
 
-      for (int j = 0; j < w; j++) {
+    Sphere spheres[] = { CenterSphere, CenterDownSphere, bSphere, cSphere, backGround ,ceiling, floor , RWall,LWall };
+    int nbSpheres = 9;
 
-          Vector3 pixelPos(j, i, focale);
-          Vector3 rayDir = (pixelPos - camera).Normalized();
-          Ray aRay(camera, rayDir);
+    /*Sphere spheres[] = { CenterSphere ,CenterDownSphere,  backGround ,ceiling, floor , RWall,LWall };
+    int nbSpheres = 6; */
 
+    float maxD = 3100;
+    float focale = 1000;
 
-          float min = 99999999999;
+    Light aLight(Vector3(w / 2 , h / 2 + 50 ,1000), Color::White, 2000);
 
-          float res = 0;
-          for (int k = 0; k < nbSpheres; k++)
-          {
+    Light bLight(Vector3(10, 10, 1300), Color::White,  500);
+    Light cLight(Vector3(w - 10, h - 10, 1100), Color::White,  500);
+    Light dLight(Vector3(100, h , 1450), Color::White,  500);
 
-              if (!std::isnan(res = CalculateRaySphereIntersection(aRay, spheres[k])))
-              {
-                  
-                  if (res < min) {
+    Light lights[] = { aLight, bLight, cLight, dLight };
+    int nbLights = 4;
 
-                      min = res;
-                      float toneDeep = toneMap(res, maxD);
-                      Color lighted = light_Transport(lights, 4 ,spheres[k], aRay, res);
-                      mat[i][j] = lighted;
-                  }
+    /*Light lights[] = { aLight };
+    int nbLights = 1;*/
 
-              }
-          }
-         
-
-          
-      }
-   }
-
-  
+    Vector3 camera(w / 2, h / 2, 0);
 
 
-   Image img(w, h, mat);
 
-   img.WriteImage("C:\\Users\\jlarmat\\Pictures\\Test");
+    for (int i = 0; i < h; i++) {
+
+        for (int j = 0; j < w; j++) {
+
+            Vector3 pixelPos(j, i, focale);
+            Vector3 rayDir = (pixelPos - camera).Normalized();
+            Ray aRay(camera, rayDir);
+
+
+            float min = 99999999999;
+
+            float res = 0;
+            for (int k = 0; k < nbSpheres; k++)
+            {
+
+                if (!std::isnan(res = CalculateRaySphereIntersection(aRay, spheres[k])))
+                {
+
+                    if (res < min) {
+
+                        min = res;
+                        //float toneDeep = toneMap(res, maxD);
+                        Vector3 rayIntersec = aRay.origin + aRay.direction * res;
+                        Color pixelColor = light_Transport(lights, nbLights, k ,spheres, nbSpheres, rayIntersec);
+                        mat[i][j] = pixelColor;
+                    }
+
+                }
+            }
+
+
+
+        }
+    }
+
+
+
+
+    Image img(w, h, mat);
+
+    img.WriteImage("C:\\Dev");
 
 
 
@@ -255,7 +283,7 @@ int main()
 }
 
 
- 
+
 
 void GeometricSolutionRaytrace() {
 
