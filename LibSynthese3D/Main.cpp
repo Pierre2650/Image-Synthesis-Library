@@ -250,7 +250,7 @@ int main()
 
             //samples[0] = centerRay;
 
-            for (int s = 1; s < nbSamples; s++)
+            for (int s = 0; s < nbSamples; s++)
             {
                 float x = (float)(std::rand() / (RAND_MAX + 1.0f));
                 float y = (float)(std::rand() / (RAND_MAX + 1.0f));
@@ -286,11 +286,14 @@ int main()
             //float toneDeep = toneMap(res, maxD);
 
 
-            int avgX = 0, avgY = 0, avgZ = 0;
-            for (int s = 1; s < nbSamples ; s++)
+            float avgX = 0, avgY = 0, avgZ = 0;
+            for (int s = 0; s < nbSamples ; s++)
             {
                 float t = 0;
                 Color sampleColor = Color::Black;
+                
+
+                //needs to check the other spheres
 
                 if (!std::isnan(t = CalculateRaySphereIntersection(samples[s], spheres[sphereIndex])))
                 {
@@ -310,9 +313,9 @@ int main()
             avgY /= nbSamples ;
             avgZ /= nbSamples ;
 
-            if (avgX > spheres[sphereIndex].color.x) { avgX = spheres[sphereIndex].color.x; }
-            if (avgY > spheres[sphereIndex].color.y) { avgY = spheres[sphereIndex].color.y; }
-            if (avgZ > spheres[sphereIndex].color.z) { avgZ = spheres[sphereIndex].color.z; }
+            if (avgX > 255) { avgX = 255; }
+            if (avgY > 255) { avgY = 255; }
+            if (avgZ > 255) { avgZ = 255; }
 
             Color pixelColor(avgX, avgY, avgZ);
 
