@@ -3,6 +3,7 @@
 
 
 #include <iostream>
+#include <cstdlib>
 #include <vector>
 #include "Synthese3D.h" // personal library of vectors , colors, ray 
 #include "Image.h" // personal library of images
@@ -188,6 +189,7 @@ Color light_Transport(Light* LSource, int nbLights, int sphIndex, Sphere* sphs, 
 
 int main()
 {
+    srand(time(0));
 
     int w = 1000, h = 1000;
     std::vector<std::vector<Color>> mat(h, std::vector<Color>(w));
@@ -218,14 +220,15 @@ int main()
 
     float maxD = 3100;
     float focale = 1000;
+    const int nbSamples = 20;
 
-    Light aLight(Vector3(w / 2 , h / 2 + 50 ,1000), Color::White, 2000);
+    Light aLight(Vector3(w / 2 , h / 2 + 60 ,1000), Color::White, 1000);
 
     Light bLight(Vector3(10, 10, 1300), Color::White,  500);
     Light cLight(Vector3(w - 10, h - 10, 1100), Color::White,  500);
     Light dLight(Vector3(100, h , 1450), Color::White,  500);
 
-    Light lights[] = { aLight, bLight, cLight, dLight };
+    Light lights[] = {aLight, cLight, dLight };
     int nbLights = 4;
 
     /*Light lights[] = { aLight };
@@ -239,32 +242,83 @@ int main()
 
         for (int j = 0; j < w; j++) {
 
-            Vector3 pixelPos(j, i, focale);
-            Vector3 rayDir = (pixelPos - camera).Normalized();
-            Ray aRay(camera, rayDir);
+            Ray samples[nbSamples + 1];
+
+            Vector3 pixelCenter(j, i, focale);
+            Vector3 rayDir = (pixelCenter - camera).Normalized();
+            Ray centerRay(camera, rayDir);
+
+            //samples[0] = centerRay;
+
+            for (int s = 1; s < nbSamples; s++)
+            {
+                float x = (float)(std::rand() / (RAND_MAX + 1.0f));
+                float y = (float)(std::rand() / (RAND_MAX + 1.0f));
+
+                //float x = 0;
+                //float y = 0;
+                
+                //std::cout << "x =" << x << "  y = " << y << std::endl;
+                
+                Vector3 aSample(j + x, i + y, focale);
+                Vector3 aRayDir = (aSample - camera).Normalized();
+                Ray aRay(camera, aRayDir);
+                samples[s] = aRay;
+            }
 
 
             float min = 99999999999;
-
             float res = 0;
+            int sphereIndex;
             for (int k = 0; k < nbSpheres; k++)
             {
-
-                if (!std::isnan(res = CalculateRaySphereIntersection(aRay, spheres[k])))
+                if (!std::isnan(res = CalculateRaySphereIntersection(centerRay, spheres[k])))
                 {
-
                     if (res < min) {
 
                         min = res;
-                        //float toneDeep = toneMap(res, maxD);
-                        Vector3 rayIntersec = aRay.origin + aRay.direction * res;
-                        Color pixelColor = light_Transport(lights, nbLights, k ,spheres, nbSpheres, rayIntersec);
-                        mat[i][j] = pixelColor;
+                        sphereIndex = k;
                     }
 
                 }
             }
 
+            //float toneDeep = toneMap(res, maxD);
+
+
+            int avgX = 0, avgY = 0, avgZ = 0;
+            for (int s = 1; s < nbSamples ; s++)
+            {
+                float t = 0;
+                Color sampleColor = Color::Black;
+
+                if (!std::isnan(t = CalculateRaySphereIntersection(samples[s], spheres[sphereIndex])))
+                {
+                    Vector3 rayIntersec = samples[s].origin + samples[s].direction * t;
+                    sampleColor = light_Transport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec);
+
+                }   
+
+                avgX += sampleColor.x;
+                avgY += sampleColor.y;
+                avgZ += sampleColor.z;
+                
+
+            }
+
+            avgX /= nbSamples ;
+            avgY /= nbSamples ;
+            avgZ /= nbSamples ;
+
+            if (avgX > spheres[sphereIndex].color.x) { avgX = spheres[sphereIndex].color.x; }
+            if (avgY > spheres[sphereIndex].color.y) { avgY = spheres[sphereIndex].color.y; }
+            if (avgZ > spheres[sphereIndex].color.z) { avgZ = spheres[sphereIndex].color.z; }
+
+            Color pixelColor(avgX, avgY, avgZ);
+
+            //Vector3 rayIntersec = centerRay.origin + centerRay.direction * min;
+            //Color pixelColor = light_Transport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec);
+            mat[i][j] = pixelColor;
 
 
         }
@@ -285,76 +339,3 @@ int main()
 
 
 
-void GeometricSolutionRaytrace() {
-
-    Ray camRay(Vector3(1, 1, 0), Vector3(1, 0.5, 0));
-
-    Sphere Sph(Vector3(4, 4, 0), 1, Color::White);
-
-    // Geometric sol to raytrace a sphere
-
-    // t0 = Tca -  Thc
-    // t1 = Tca +  Thc
-    // Thc ? tca?
-    // P ( first point where ray intersects sphere ) = rayOrigin + t0*rayDir
-    // P'( Last point where ray intersects sphere) = rayOrigin + t1*rayDir
-
-    //we got a triagle were 
-    // L = distance from camera origin to Sphere origin, 
-    // Tca  = distance between origin of camera  and the point that is perpandicular to Sphere origin
-    // d = distance between he point that is perpandicular to Sphere origin and the Sphere origin
-
-    Vector3 L = Sph.origin - camRay.origin;
-
-    // vector a =  camera ray direction
-    // vector b = camera to sphere origin direction 
-    float Tca = Vector3::Dot(camRay.direction, L);
-    Vector3 TcaV = camRay.direction * Tca;
-
-    // L = sqrt( tca^2 + dtoSphOrigin^2)
-    // dtoSphOrigin = sqrt(L^2 _ Tca^2)
-
-    float x = Vector3::Dot(L, L); // =>   L.Magnitude() * L.Magnitude()
-    float y = Vector3::Dot(TcaV, TcaV);
-    float d = std::sqrt(x - y);
-
-    // if d > sphere radius = ray missed the sphere so next ray
-
-    // Sphere_radius = sqrt(Thc^2 + d^2)
-    // Thc = sqrt(Sphere_radius^2 - d^2)
-
-    x = Sph.rayon * Sph.rayon;
-    y = d * d;
-
-    float Thc = std::sqrt(x - y);
-
-    //Now whe find t0 t1
-    float t0 = Tca - Thc;
-    float t1 = Tca + Thc;
-
-    Vector3 P = camRay.origin + camRay.direction * t0;
-    Vector3 P_ = camRay.origin + camRay.direction * t1;
-
-
-}
-
-void TestDrawCircle(std::vector<std::vector<Color>> mat) {
-    Sphere sph(Vector3(32, 32, 0), 5, Color::White);
-
-    double PI = 2 * acos(0.0);
-
-    std::vector<Vector3> circleCoord;
-
-    for (float i = 0; i < (PI * 2); i = i + 0.1f) {
-        Vector3 test(sph.origin.x + std::cos(i) * sph.rayon, sph.origin.y + std::sin(i) * sph.rayon, 0);
-
-        test = Vector3(roundf(test.x), roundf(test.y), roundf(test.z));
-        std::cout << "test = " << test << std::endl;
-
-        circleCoord.push_back(test);
-    }
-
-    for (int k = 0; k < circleCoord.size(); k++) {
-        mat[circleCoord[k].x][circleCoord[k].y] = Color::Red;
-    }
-}
