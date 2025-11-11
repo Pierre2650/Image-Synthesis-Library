@@ -26,11 +26,20 @@ public:
     Vector3 origin;
     float rayon;
     Color color;
+    bool Diffuse;
 
     Sphere(Vector3 origine, float rayon, Color col) {
         this->origin = origine;
         this->rayon = rayon;
         this->color = col;
+        this->Diffuse = false;
+    }
+
+    Sphere(Vector3 origine, float rayon, Color col, bool diffuse) {
+        this->origin = origine;
+        this->rayon = rayon;
+        this->color = col;
+        this->Diffuse = diffuse;
     }
 
 };
@@ -48,7 +57,51 @@ public:
 };
 
 
+Vector3 randomVector() {
 
+    /* int nbSign
+
+     if (nbSign == 1) { nbSign = -1;}
+     else {  nbSign = 1; }
+
+     float x = (float)(std::rand() / (RAND_MAX + 1.0f) *nbSign);
+     float y = (float)(std::rand() / (RAND_MAX + 1.0f) );
+     float z = (float)(std::rand() / (RAND_MAX + 1.0f) );*/
+
+    int nbSign = 0;
+    float vectComponents[3];
+
+    for (int i = 0; i < 3; i++)
+    {
+        nbSign = rand() % 2;
+        if (nbSign == 1) { nbSign = -1; }
+        else { nbSign = 1; }
+
+        vectComponents[i] = (float)(std::rand() / (RAND_MAX + 1.0f));
+        vectComponents[i] *= nbSign;
+    }
+
+    return Vector3(vectComponents[0], vectComponents[1], vectComponents[2]);
+}
+
+Vector3 randomVectorRejectionMethod() {
+    int treshold = 0;
+
+    while (true) {
+
+        Vector3 Test = randomVector();
+
+        if (1e-160 < Test.Magnitude() && Test.Magnitude() <= 1) {
+            return Test.Normalized();
+        }
+
+        treshold++;
+        if (treshold >= 200) {
+            std::cout << "Error loop treshold reached breaking loop" << std::endl;
+            return Vector3::NaN;
+        }
+    }
+}
 
 
 float CalculateRaySphereIntersection(Ray ray, Sphere sph) {
@@ -110,6 +163,26 @@ float CalculateRaySphereIntersection(Ray ray, Sphere sph) {
 
 }
 
+int getClosestSphere(float* min, Ray sampleRay, Sphere* sphs, int nbSpheres) {
+
+    float t = 0;
+    int result = -1;
+
+    for (int k = 0; k < nbSpheres; k++)
+    {
+        if (!std::isnan(t = CalculateRaySphereIntersection(sampleRay, sphs[k])))
+        {
+            if (t < *min) {
+                *min = t;
+                result = k;
+            }
+
+        }
+    }
+
+    return result;
+}
+
 float toneMap(float t, float maxD) {
     //1.A formula for mapping from[0, ∞) to[0, 1]
     //2.A method of applying this to the color.
@@ -120,7 +193,7 @@ float toneMap(float t, float maxD) {
     return tone;
 }
 
-Color light_Transport(Light* LSource, int nbLights, int sphIndex, Sphere* sphs, int nbSph, Vector3 rayIntersec) {
+Color lightTransport(Light* LSource, int nbLights, int sphIndex, Sphere* sphs, int nbSph, Vector3 rayIntersec) {
 
     // L_o = L_e + V(P, L_p) * L_emit / D ^ 2 * Albedo * | N . L_i |
      // L_o --> light form surface
@@ -135,16 +208,45 @@ Color light_Transport(Light* LSource, int nbLights, int sphIndex, Sphere* sphs, 
 
      //intersection P->O + tD
 
+
     Vector3 N = (rayIntersec - sphs[sphIndex].origin).Normalized();
     Vector3 calculation(Vector3::Zero);
-    Vector3 L_e = Vector3::Zero;
+    Vector3 L_e = Vector3::Zero; // light emited by the object?
     Color albedo = sphs[sphIndex].color;
+
+
+    if (sphs[sphIndex].Diffuse) {
+        Vector3 unitVector = randomVectorRejectionMethod();
+        if (Vector3::Dot(unitVector, N) < 0.0) { // Not in the same hemisphere as the normal
+            unitVector = -unitVector;  
+        }
+
+        float epsilon = 0.001;
+
+        Ray bounceRay(rayIntersec  + N * epsilon ,  unitVector);
+
+        float min = 9999999999999;
+        int temp = getClosestSphere(&min, bounceRay, sphs, nbSph);
+        if (temp == -1) {
+            //std::cout << "No sphere hit" << std::endl;
+            return Color::Black;
+        }
+
+        Sphere reflection = sphs[temp];
+        Vector3 newRayIntersec = bounceRay.origin + bounceRay.direction * min;
+    
+
+        rayIntersec = bounceRay.origin + bounceRay.direction * min;
+        N = (rayIntersec - reflection.origin).Normalized();
+        albedo = reflection.color * 1; // 0.5;
+
+    }
+
 
     for (int i = 0; i < nbLights; i++) {
         float V = 1;
         Vector3 L_i = (LSource[i].position - rayIntersec).Normalized();
         Ray toLight(rayIntersec, L_i);
-        //float t = CalculateRaySphereIntersection(toSphere, sphs[sphIndex]);
         float Test = 0;
 
         for (int k = 0; k < nbSph; k++) {
@@ -159,27 +261,27 @@ Color light_Transport(Light* LSource, int nbLights, int sphIndex, Sphere* sphs, 
             }
         }
 
-
         float L_emit = LSource[i].intensity;
         float D = Vector3::Distance(rayIntersec, LSource[i].position);
 
-        calculation +=   V * (L_emit / (D * D)) * albedo * std::max(0.f, Vector3::Dot(N, L_i));
+       
+        calculation += V * (L_emit / (D * D)) * albedo * std::max(0.f, Vector3::Dot(N, L_i));
 
-        calculation.x = calculation.x * (LSource[i].color.x / 255);
-        calculation.y = calculation.y * (LSource[i].color.y / 255);
-        calculation.z = calculation.z * (LSource[i].color.z / 255);
+        calculation.x *= (LSource[i].color.x / 255);
+        calculation.y *= (LSource[i].color.y / 255);
+        calculation.z *= (LSource[i].color.z / 255);
     }
 
     Color L_o( L_e + calculation);
 
-    float x = L_o.x *sphs[sphIndex].color.x;
-    float y = L_o.y *sphs[sphIndex].color.y;
-    float z = L_o.z *sphs[sphIndex].color.z;
+   float x = L_o.x * albedo.x;
+   float y = L_o.y * albedo.y;
+   float z = L_o.z * albedo.z;
 
+    if (x > albedo.x) { x = albedo.x; }
+    if (y > albedo.y) { y = albedo.y; }
+    if (z > albedo.z) { z = albedo.z; }
 
-    if (x > sphs[sphIndex].color.x) { x = sphs[sphIndex].color.x; }
-    if (y > sphs[sphIndex].color.y) { y = sphs[sphIndex].color.y; }
-    if (z > sphs[sphIndex].color.z) { z = sphs[sphIndex].color.z; }
 
     Color res(x, y, z);
     return res;
@@ -200,9 +302,8 @@ int main()
         }
     }
 
-
     Sphere CenterSphere(Vector3(w / 2, h / 2 , 1300), 100, Color::White);
-    Sphere CenterDownSphere(Vector3(w / 2, h / 2 + 250, 1300), 100, Color(255, 215, 0,1));
+    Sphere CenterDownSphere(Vector3(w / 2, h / 2 + 250, 1300), 100, Color(255, 215, 0,1),true);
     Sphere bSphere(Vector3(200, 300, 1500), 150, Color::Blue);
     Sphere cSphere(Vector3(800, 800, 1400), 70, Color::Green);
 
@@ -215,9 +316,6 @@ int main()
     Sphere spheres[] = { CenterSphere, CenterDownSphere, bSphere, cSphere, backGround ,ceiling, floor , RWall,LWall };
     int nbSpheres = 9;
 
-    /*Sphere spheres[] = { CenterSphere ,CenterDownSphere,  backGround ,ceiling, floor , RWall,LWall };
-    int nbSpheres = 6; */
-
     float maxD = 3100;
     float focale = 1000;
     const int nbSamples = 20;
@@ -229,14 +327,10 @@ int main()
     Light dLight(Vector3(100, h , 1450), Color::White,  500);
 
     Light lights[] = {aLight, cLight, dLight };
-    int nbLights = 4;
+    int nbLights = 3;
 
-    /*Light lights[] = { aLight };
-    int nbLights = 1;*/
 
     Vector3 camera(w / 2, h / 2, 0);
-
-
 
     for (int i = 0; i < h; i++) {
 
@@ -247,82 +341,59 @@ int main()
             Ray centerRay(camera, rayDir);
 
 
-            Ray samples[nbSamples + 1];
+           float avgX = 0, avgY = 0, avgZ = 0;
+           int sphereIndex = 0;
 
-            //samples[0] = centerRay;
+           for (int s = 0; s < nbSamples; s++)
+           {
 
-            for (int s = 0; s < nbSamples; s++)
-            {
                 float x = (float)(std::rand() / (RAND_MAX + 1.0f));
                 float y = (float)(std::rand() / (RAND_MAX + 1.0f));
 
-                //float x = 0;
-                //float y = 0;
-                
-                //std::cout << "x =" << x << "  y = " << y << std::endl;
-                
+
                 Vector3 aSample(j + x, i + y, focale);
                 Vector3 aRayDir = (aSample - camera).Normalized();
                 Ray aRay(camera, aRayDir);
-                samples[s] = aRay;
-            }
 
-
-            float min = 99999999999;
-            float res = 0;
-            int sphereIndex;
-            for (int k = 0; k < nbSpheres; k++)
-            {
-                if (!std::isnan(res = CalculateRaySphereIntersection(centerRay, spheres[k])))
-                {
-                    if (res < min) {
-
-                        min = res;
-                        sphereIndex = k;
-                    }
-
-                }
-            }
-
-            //float toneDeep = toneMap(res, maxD);
-
-
-            float avgX = 0, avgY = 0, avgZ = 0;
-            for (int s = 0; s < nbSamples ; s++)
-            {
-                float t = 0;
                 Color sampleColor = Color::Black;
+
+                float min = 99999999999;
+                sphereIndex = getClosestSphere(&min, aRay, spheres, nbSpheres);
+
+                if (sphereIndex == -1) {
+                    std::cout << "No sphere hit" << std::endl;
+                    continue;
+                }
+
+
                 
 
-                //needs to check the other spheres
+                Vector3 rayIntersec = aRay.origin + aRay.direction *  min ;
 
-                if (!std::isnan(t = CalculateRaySphereIntersection(samples[s], spheres[sphereIndex])))
-                {
-                    Vector3 rayIntersec = samples[s].origin + samples[s].direction * t;
-                    sampleColor = light_Transport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec);
+                sampleColor = lightTransport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec);
 
-                }   
 
-                avgX += sampleColor.x;
-                avgY += sampleColor.y;
-                avgZ += sampleColor.z;
-                
+               avgX += sampleColor.x;
+               avgY += sampleColor.y;
+               avgZ += sampleColor.z;
 
-            }
 
-            avgX /= nbSamples ;
-            avgY /= nbSamples ;
-            avgZ /= nbSamples ;
+           }
 
-            if (avgX > 255) { avgX = 255; }
-            if (avgY > 255) { avgY = 255; }
-            if (avgZ > 255) { avgZ = 255; }
 
-            Color pixelColor(avgX, avgY, avgZ);
+           avgX /= nbSamples ;
+           avgY /= nbSamples ;
+           avgZ /= nbSamples ;
 
-            //Vector3 rayIntersec = centerRay.origin + centerRay.direction * min;
-            //Color pixelColor = light_Transport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec);
-            mat[i][j] = pixelColor;
+       
+
+           if (avgX > 255) { avgX = 255; }
+           if (avgY > 255) { avgY = 255; }
+           if (avgZ > 255) { avgZ = 255; }
+
+           Color pixelColor(avgX, avgY, avgZ);
+
+           mat[i][j] = pixelColor;
 
 
         }
@@ -336,7 +407,7 @@ int main()
     img.WriteImage("C:\\Dev");
 
 
-
+    std::cout << "DONE !";
 
 }
 
