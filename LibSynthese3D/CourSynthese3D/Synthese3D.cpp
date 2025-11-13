@@ -164,16 +164,15 @@ Color::Color(float x, float y, float z,  float t) : Vector3(x, y, z) {
 	this->Transparency = t;
 }
 
-Vector3 Color::Clamp(float x, float y, float z) {
-	if (x > 255) { x = 255; }
-	if (x < 0) { x = 0; }
-	if (y > 255) { y = 255; }
-	if (y < 0) { y = 0; }
-	if (z > 255) { z = 255; }
-	if (z < 0) { z = 0; }
+void Color::Clamp() {
+	if (this->x > 255) { this->x = 255; }
+	if (this->x < 0) { this->x = 0; }
 
-	Vector3 result(x, y, z);
-	return result;
+	if (this->y > 255) { this->y = 255; }
+	if (this->y < 0) { this->y = 0; }
+
+	if (this->z > 255) { this->z = 255; }
+	if (this->z < 0) { this->z = 0; }
 }
 
 /// ------------- Var -------------
@@ -184,6 +183,21 @@ Color const Color::Black(0, 0, 0,1);
 Color const Color::White(255, 255, 255,1);
 
 //// ------------- Overrides -------------
+
+Color Color::operator*(const Color& other) const {
+	return  Color(x * other.x, y * other.y, z * other.z);
+}
+
+
+Color Color::operator*(const float& other) const {
+	return  Color(x * other, y * other, z * other);
+}
+
+
+Color operator*(const float& scalar, const Color& vec) {
+	return Color(vec.x * scalar, vec.y * scalar, vec.z * scalar);
+}
+
 
 std::ostream& operator<<(std::ostream& os, const Color& A) {
 	os << "(" << A.x << ", " << A.y << ", " << A.z << ", " << A.Transparency << ")";

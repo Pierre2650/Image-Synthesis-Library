@@ -60,8 +60,12 @@ class Color : public Vector3
 		Color(float x, float y, float z);
 		Color(float x, float y, float z, float t);
 
-	private:
-		Vector3 Clamp(float x, float y, float z);
+	public:
+		void Clamp();
+		Color operator*(const Color& other) const;
+
+		Color operator*(const float& other) const;
+		friend Color operator*(const float& scalar, const Color& vec);
 
 };
 
