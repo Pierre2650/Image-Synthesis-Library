@@ -233,7 +233,7 @@ Color directLightTransport(Light* LSource, int nbLights, int sphIndex, Sphere* s
         Ray toLight(rayIntersec, L_i);
         float Test = 0;
 
-        for (int k = 0; k < nbSph-1; k++) {
+        for (int k = 0; k < nbSph; k++) {
 
             if (k == sphIndex) { continue; }
 
@@ -280,23 +280,97 @@ Color directLightTransport(Light* LSource, int nbLights, int sphIndex, Sphere* s
 
 Color diffuseLightTransport(int nbBounces,int sphIndex, Sphere* sphs, int nbSph, Vector3 rayIntersec) {
 
-    Color result = Color::Black;
-    float colorRetention = 1;
+    if (nbBounces >= 5) {
 
-    Vector3 N = (rayIntersec - sphs[sphIndex].origin).Normalized();
-    Vector3 unitVector = randomVectorRejectionMethod();
-    if (Vector3::Dot(unitVector, N) < 0.0) { // Not in the same hemisphere as the normal
-        unitVector = -unitVector;
+        return Color::Black;
     }
 
-    float epsilon = 0.001;
-    Ray bounceRay(rayIntersec + N * epsilon, unitVector);
-    //Ray bounceRay(rayIntersec, N + unitVector)
-    //Ray bounceRay(rayIntersec, N + unitVector);
+    Vector3 N = (rayIntersec - sphs[sphIndex].origin).Normalized();
+    //float epsilon = 0.001;
+    float epsilon = 1;
+    Vector3 rayOrigin = rayIntersec + N * epsilon;
 
+    const int nbSamples = 8;
+    Color result = Color::Black;
+    float colorRetention = 1;
+    float avgX = 0, avgY = 0, avgZ = 0;
+    for (int i = 0; i < nbSamples; i++)
+    {
+        Vector3 randomDir = randomVectorRejectionMethod();
+        if (Vector3::Dot(randomDir, N) < 0.0) { // Not in the same hemisphere as the normal
+            randomDir = -randomDir;
+        }
+
+       Ray sampleRay(rayOrigin, randomDir);
+
+       float min = 9999999999999;
+      // int sphereIndex 
+       sphIndex = getClosestSphere(&min, sampleRay, sphs, nbSph);
+       Color found = Color::Black;
+
+       if (sphIndex == 9) {
+           //Light sphere
+           found =  Color(sphs[sphIndex].color.x / 255, sphs[sphIndex].color.y / 255, sphs[sphIndex].color.z / 255);
+       }
+       else if (sphIndex == -1) {
+           //No sphere
+           found = Color(0, 0, 0);
+       }
+       else
+       {
+           found = sphs[sphIndex].color;
+           
+           found  = found / 255;
+           /*found.x /= 255;
+           found.y /= 255;
+           found.z /= 255;*/
+
+
+           nbBounces++;
+           found = found * colorRetention * diffuseLightTransport(nbBounces, sphIndex, sphs, nbSph, rayIntersec);
+       }
+
+
+       avgX += found.x;
+       avgY += found.y;
+       avgZ += found.z;
+
+    }
+
+
+    avgX /= nbSamples;
+    avgY /= nbSamples;
+    avgZ /= nbSamples;
+
+    Color average(avgX, avgY, avgZ);
+
+    return average;
+
+}
+
+Color diffuseLightTransportOld(int nbBounces, int sphIndex, Sphere* sphs, int nbSph, Vector3 rayIntersec) {
+
+
+    Vector3 N = (rayIntersec - sphs[sphIndex].origin).Normalized();
+    //float epsilon = 0.001;
+    float epsilon = 0.5;
+    Vector3 rayOrigin = rayIntersec + N * epsilon;
+
+    Vector3 randomDir = randomVectorRejectionMethod();
+    if (Vector3::Dot(randomDir, N) < 0.0) { // Not in the same hemisphere as the normal
+        randomDir = -randomDir;
+    }
+
+    Ray bounceRay(rayOrigin, randomDir);
+
+
+    float colorRetention = 1;
+    Color result = Color::Black;
     float min = 9999999999999;
     sphIndex = getClosestSphere(&min, bounceRay, sphs, nbSph);
+
     if (sphIndex == 9) {
+        nbBounces++;
         Color light(sphs[sphIndex].color.x / 255, sphs[sphIndex].color.y / 255, sphs[sphIndex].color.z / 255);
         return light;
     }
@@ -304,35 +378,19 @@ Color diffuseLightTransport(int nbBounces,int sphIndex, Sphere* sphs, int nbSph,
     if (sphIndex == -1) {
         //std::cout << "No sphere hit" << std::endl;
         //return Color::Black;
-        
+        nbBounces++;
         Color blackNormalize(0.1, 0.1, 0.1);
         return blackNormalize;
     }
 
-
     Sphere reflection = sphs[sphIndex];
     Vector3 newRayIntersec = bounceRay.origin + bounceRay.direction * min;
 
-    if (Vector3::Distance(newRayIntersec, rayIntersec) < 0.001f) {
-
-        result = reflection.color;
-
-    }
-    else {
-
-        result = reflection.color;  // 0.5;
-
-    }
 
     result.x /= 255;
     result.y /= 255;
     result.z /= 255;
 
-    rayIntersec = bounceRay.origin + bounceRay.direction * min;
-    N = (rayIntersec - reflection.origin).Normalized();
-
-    // need to make it recursive and multiple colors at the end of each bounce
-    
     if (nbBounces >= 10) {
 
         return result;
@@ -340,10 +398,15 @@ Color diffuseLightTransport(int nbBounces,int sphIndex, Sphere* sphs, int nbSph,
     else
     {
 
-        return result * colorRetention * diffuseLightTransport(nbBounces+1,sphIndex, sphs, nbSph, rayIntersec );
-    }
-}
+        rayIntersec = bounceRay.origin + bounceRay.direction * min;
+     
 
+        nbBounces++;
+        return result * colorRetention * diffuseLightTransport(nbBounces,sphIndex, sphs, nbSph, rayIntersec );
+    }
+
+    
+}
 
 int main()
 {
@@ -360,32 +423,32 @@ int main()
 
     Sphere CenterSphere(Vector3(w / 2, h / 2, 1300), 100, Color::White);
     Sphere CenterDownSphere(Vector3(w / 2, h / 2 + 250, 1300), 100, Color(255, 215, 0, 1), true);
-    Sphere bSphere(Vector3(200, 300, 1500), 150, Color::Blue);
+    Sphere bSphere(Vector3(200, 300, 1500), 150, Color::Blue,true);
     Sphere cSphere(Vector3(800, 800, 1400), 70, Color::Green);
 
     Sphere backGround(Vector3(w / 2, h / 2, 3100), 1600, Color(192, 192, 192));
     Sphere floor(Vector3(w / 2, h + 1600, 2100), 1600, Color(75, 0, 130));
     Sphere ceiling(Vector3(w / 2, -1600, 2100), 1600, Color(230, 230, 250));
-    Sphere RWall(Vector3(w + 1600, h / 2, 2100), 1600, Color(0, 206, 209));
+    Sphere RWall(Vector3(w + 1600, h / 2, 2100), 1600, Color(0, 206, 209),true);
     Sphere LWall(Vector3(-1600, h / 2, 2100), 1600, Color(0, 206, 209));
 
-    Sphere noPointLight(Vector3(w / 2 - 250, h / 2 + 250, 1300), 150, Color::White, false, true);
+    Sphere noPointLight(Vector3(w / 2 -300, h / 2 +300 , 1300), 180, Color::White, false, true);
 
     Sphere spheres[] = { CenterSphere, CenterDownSphere, bSphere, cSphere, backGround ,ceiling, floor , RWall,LWall, noPointLight };
     int nbSpheres = 10;
 
-    float maxD = 3100;
-    float focale = 1000;
-    const int nbSamples = 8;
 
     Light aLight(Vector3(w / 2, h / 2 + 60, 1000), Color::White, 1000);
-
     Light bLight(Vector3(10, 10, 1300), Color::White, 500);
     Light cLight(Vector3(w - 10, h - 10, 1100), Color::White, 500);
     Light dLight(Vector3(100, h, 1450), Color::White, 500);
 
-    Light lights[] = { aLight, cLight, dLight };
-    int nbLights = 3;
+    Light lights[] = { aLight, cLight /*,  dLight */};
+    int nbLights = 2;
+
+    float maxD = 3100;
+    float focale = 1000;
+    const int nbSamples = 10;
 
 
     Vector3 camera(w / 2, h / 2, 0);
@@ -415,7 +478,7 @@ int main()
 
                 //Closes sphere calculation
                 float t = 99999999999;
-                sphereIndex = getClosestSphere(&t, aRay, spheres, nbSpheres-1);
+                sphereIndex = getClosestSphere(&t, aRay, spheres, nbSpheres);
                 if (sphereIndex == -1) {
                     std::cout << "No sphere hit" << std::endl;
                     continue;
@@ -424,14 +487,24 @@ int main()
                 Vector3 rayIntersec = aRay.origin + aRay.direction * t;
 
                 if (spheres[sphereIndex].Diffuse) {
+                    int nbBounces = 0;
 
-                    sampleColor = diffuseLightTransport(0 ,sphereIndex, spheres, nbSpheres, rayIntersec);
+                    sampleColor = diffuseLightTransport(nbBounces ,sphereIndex, spheres, nbSpheres, rayIntersec);
+
                     //careful value should be 0-1 re convert to 255
                     sampleColor = sampleColor * 255;
+
                 }
                 else
                 {
-                    sampleColor = directLightTransport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec);
+                    if (spheres[sphereIndex].isLight)
+                    {
+                        sampleColor = spheres[sphereIndex].color;
+                    }
+                    else {
+                        sampleColor = directLightTransport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec);
+                    }
+                   
                 }
 
 

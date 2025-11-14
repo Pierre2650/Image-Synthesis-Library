@@ -62,10 +62,18 @@ class Color : public Vector3
 
 	public:
 		void Clamp();
-		Color operator*(const Color& other) const;
 
+		Color operator+(const Color& other) const;
+		Color operator-(const Color& other) const;
+		Color operator-() const;
+		Color operator-(const float& other) const;
+
+		Color operator*(const Color& other) const;
 		Color operator*(const float& other) const;
 		friend Color operator*(const float& scalar, const Color& vec);
+
+
+		Color operator/(const float& other) const;
 
 };
 

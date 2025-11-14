@@ -184,6 +184,22 @@ Color const Color::White(255, 255, 255,1);
 
 //// ------------- Overrides -------------
 
+Color Color::operator+(const Color& other) const {
+	return Color(x + other.x, y + other.y, z + other.z);
+}
+
+Color Color::operator-(const Color& other) const {
+	return Color(x - other.x, y - other.y, z - other.z);
+}
+
+Color Color::operator-() const {
+	return Color(-x, -y, -z);
+}
+
+Color Color::operator-(const float& other) const {
+	return  Color(x - other, y - other, z - other);
+}
+
 Color Color::operator*(const Color& other) const {
 	return  Color(x * other.x, y * other.y, z * other.z);
 }
@@ -197,6 +213,12 @@ Color Color::operator*(const float& other) const {
 Color operator*(const float& scalar, const Color& vec) {
 	return Color(vec.x * scalar, vec.y * scalar, vec.z * scalar);
 }
+
+
+Color Color::operator/(const float& other) const {
+	return  Color(x / other, y / other, z / other);
+}
+
 
 
 std::ostream& operator<<(std::ostream& os, const Color& A) {

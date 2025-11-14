@@ -3,12 +3,12 @@
   "WorkspaceRootPath": "C:\\Users\\jlarmat\\Documents\\GitHub\\Image-Synthesis-Library\\LibSynthese3D\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{AFC5FE03-53BA-43C0-9AF1-615B3ABFDCBE}|CourSynthese3D\\CourSynthese3D.vcxproj|C:\\Users\\jlarmat\\Documents\\GitHub\\Image-Synthesis-Library\\LibSynthese3D\\CourSynthese3D\\Synthese3D.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{AFC5FE03-53BA-43C0-9AF1-615B3ABFDCBE}|CourSynthese3D\\CourSynthese3D.vcxproj|solutionrelative:CourSynthese3D\\Synthese3D.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{AFC5FE03-53BA-43C0-9AF1-615B3ABFDCBE}|CourSynthese3D\\CourSynthese3D.vcxproj|C:\\Users\\jlarmat\\Documents\\GitHub\\Image-Synthesis-Library\\LibSynthese3D\\CourSynthese3D\\Synthese3D.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{AFC5FE03-53BA-43C0-9AF1-615B3ABFDCBE}|CourSynthese3D\\CourSynthese3D.vcxproj|solutionrelative:CourSynthese3D\\Synthese3D.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{AFC5FE03-53BA-43C0-9AF1-615B3ABFDCBE}|CourSynthese3D\\CourSynthese3D.vcxproj|C:\\Users\\jlarmat\\Documents\\GitHub\\Image-Synthesis-Library\\LibSynthese3D\\CourSynthese3D\\Synthese3D.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{AFC5FE03-53BA-43C0-9AF1-615B3ABFDCBE}|CourSynthese3D\\CourSynthese3D.vcxproj|solutionrelative:CourSynthese3D\\Synthese3D.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{AFC5FE03-53BA-43C0-9AF1-615B3ABFDCBE}|CourSynthese3D\\CourSynthese3D.vcxproj|C:\\Users\\jlarmat\\Documents\\GitHub\\Image-Synthesis-Library\\LibSynthese3D\\CourSynthese3D\\Image.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
@@ -30,7 +30,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Document",
@@ -70,26 +70,26 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "Synthese3D.cpp",
               "DocumentMoniker": "C:\\Users\\jlarmat\\Documents\\GitHub\\Image-Synthesis-Library\\LibSynthese3D\\CourSynthese3D\\Synthese3D.cpp",
               "RelativeDocumentMoniker": "CourSynthese3D\\Synthese3D.cpp",
               "ToolTip": "C:\\Users\\jlarmat\\Documents\\GitHub\\Image-Synthesis-Library\\LibSynthese3D\\CourSynthese3D\\Synthese3D.cpp",
               "RelativeToolTip": "CourSynthese3D\\Synthese3D.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAALoAAAAAAAAAAAAAANAAAAAwAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-10-01T15:15:38.203Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "Synthese3D.h",
               "DocumentMoniker": "C:\\Users\\jlarmat\\Documents\\GitHub\\Image-Synthesis-Library\\LibSynthese3D\\CourSynthese3D\\Synthese3D.h",
               "RelativeDocumentMoniker": "CourSynthese3D\\Synthese3D.h",
               "ToolTip": "C:\\Users\\jlarmat\\Documents\\GitHub\\Image-Synthesis-Library\\LibSynthese3D\\CourSynthese3D\\Synthese3D.h",
               "RelativeToolTip": "CourSynthese3D\\Synthese3D.h",
-              "ViewState": "AgIAACIAAAAAAAAAAAAAACoAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAACcAAAAAAAAAAAAAAEsAAAAsAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2025-10-02T11:51:38.436Z",
               "EditorCaption": ""
