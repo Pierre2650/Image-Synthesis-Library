@@ -10,14 +10,11 @@
 #include <cmath>
 
 
-
-class Material {
-public:
-    Vector3 L_e;
-
-    Material(Vector3 LightEmited) {
-        this->L_e = LightEmited;
-    }
+enum  Material {
+    DEFAULT,
+    DIFFUSE,
+    MIRROR,
+    DIELECTRIC
 };
 
 class Sphere
@@ -26,34 +23,64 @@ public:
     Vector3 origin;
     float rayon;
     Color color;
-    bool Diffuse;
+    Material mat;
     bool isLight;
 
     Sphere(Vector3 origine, float rayon, Color col) {
         this->origin = origine;
         this->rayon = rayon;
         this->color = col;
-        this->Diffuse = false;
+        this->mat = DEFAULT;
         this->isLight = false;
+
     }
 
-    Sphere(Vector3 origine, float rayon, Color col, bool diffuse) {
+    Sphere(Vector3 origine, float rayon, Color col, Material Material) {
         this->origin = origine;
         this->rayon = rayon;
         this->color = col;
-        this->Diffuse = diffuse;
+        this->mat = Material;
         this->isLight = false;
     }
 
-    Sphere(Vector3 origine, float rayon, Color col, bool diffuse,  bool isLight) {
+    Sphere(Vector3 origine, float rayon, Color col, Material Material, bool isLight) {
         this->origin = origine;
         this->rayon = rayon;
         this->color = col;
-        this->Diffuse = diffuse;
+        this->mat = Material;
         this->isLight = isLight;
     }
 
 };
+
+
+
+class Plane {
+public:
+    Vector3 origin;
+    Vector3 normal;
+
+    Plane(Vector3 origin , Vector3 n) {
+        this->origin = origin;
+        this->normal = n.Normalized();
+    }
+};
+
+class Triangle {
+public:
+    Vector3 v1, v2, v3;
+   // Plane plane;
+
+    Triangle(Vector3 v1, Vector3 v2, Vector3 v3) {
+        this->v1 = v1;
+        this->v2 = v2;
+        this->v2 = v3;
+        //this->plane = plane;
+    }
+
+};
+
+
 
 class Light {
 public:
@@ -68,16 +95,31 @@ public:
 };
 
 
+Vector3 reflect(int sphIndex, Sphere* sphs, Vector3 rayIntersec, Vector3 rayDir) {
+
+    Vector3 N = (rayIntersec - sphs[sphIndex].origin).Normalized();
+    float b = Vector3::Dot(rayDir, N);
+    Vector3 reflectedRayDir = rayDir - (2 * b) * N;
+    return reflectedRayDir;
+}
+
+Vector3 refract(float n, float nP, int sphIndex, Sphere* sphs, Vector3 rayIntersec, Vector3 rayDir) {
+    //η = index of refraction of material the ray was previously in
+    // η' = index of refraction of the new material
+
+    Vector3 N = (rayIntersec - sphs[sphIndex].origin).Normalized();
+    float theta;
+
+    Vector3 Rpperpandicular = (n / nP) * (rayDir - (Vector3::Dot(rayDir, N) * N));
+    Vector3 Rpparallel = -N * (std::sqrt(1 - Rpperpandicular.Magnitude() * Rpperpandicular.Magnitude()));
+
+    Vector3 Rp = Rpperpandicular + Rpparallel;
+
+    return Rp;
+}
+
 Vector3 randomVector() {
 
-    /* int nbSign
-
-     if (nbSign == 1) { nbSign = -1;}
-     else {  nbSign = 1; }
-
-     float x = (float)(std::rand() / (RAND_MAX + 1.0f) *nbSign);
-     float y = (float)(std::rand() / (RAND_MAX + 1.0f) );
-     float z = (float)(std::rand() / (RAND_MAX + 1.0f) );*/
 
     int nbSign = 0;
     float vectComponents[3];
@@ -114,6 +156,23 @@ Vector3 randomVectorRejectionMethod() {
     }
 }
 
+float CalculateRayPlaneIntersection(Ray ray, Plane pl) {
+    float t = NAN;
+    float denominator = Vector3::Dot(ray.direction, pl.normal);
+
+    if (denominator > 1e-6) {
+        float nominator  = Vector3::Dot((pl.origin - ray.origin), pl.normal);
+        t = nominator / denominator;
+
+        if (t < 0)  
+        {
+            t = NAN;
+        }
+        
+    }
+
+    return t;
+}
 
 float CalculateRaySphereIntersection(Ray ray, Sphere sph) {
 
@@ -258,27 +317,18 @@ Color directLightTransport(Light* LSource, int nbLights, int sphIndex, Sphere* s
 
     Color L_o(L_e + calculation);
 
-    /*float x = L_o.x * albedo.x;
-    float y = L_o.y * albedo.y;
-    float z = L_o.z * albedo.z;
-
-    if (x > albedo.x) { x = albedo.x; }
-    if (y > albedo.y) { y = albedo.y; }
-    if (z > albedo.z) { z = albedo.z; }*/
-
-
     float x = L_o.x * 255;
     float y = L_o.y * 255;
     float z = L_o.z * 255;
 
-    Color res(x,y,z);
+    Color res(x, y, z);
     res.Clamp();
 
     return res;
 }
 
 
-Color diffuseLightTransport(int nbBounces,int sphIndex, Sphere* sphs, int nbSph, Vector3 rayIntersec) {
+Color diffuseLightTransport(int nbBounces, int sphIndex, Sphere* sphs, int nbSph, Vector3 rayIntersec) {
 
     if (nbBounces >= 5) {
 
@@ -292,6 +342,7 @@ Color diffuseLightTransport(int nbBounces,int sphIndex, Sphere* sphs, int nbSph,
 
     const int nbSamples = 8;
     Color result = Color::Black;
+    Color L = Color::Black;
     float colorRetention = 1;
     float avgX = 0, avgY = 0, avgZ = 0;
     for (int i = 0; i < nbSamples; i++)
@@ -301,39 +352,37 @@ Color diffuseLightTransport(int nbBounces,int sphIndex, Sphere* sphs, int nbSph,
             randomDir = -randomDir;
         }
 
-       Ray sampleRay(rayOrigin, randomDir);
+        Ray sampleRay(rayOrigin, randomDir);
 
-       float min = 9999999999999;
-      // int sphereIndex 
-       sphIndex = getClosestSphere(&min, sampleRay, sphs, nbSph);
-       Color found = Color::Black;
+        float min = 9999999999999;
+        // int sphereIndex 
+        sphIndex = getClosestSphere(&min, sampleRay, sphs, nbSph);
+        Color found = Color::Black;
 
-       if (sphIndex == 9) {
-           //Light sphere
-           found =  Color(sphs[sphIndex].color.x / 255, sphs[sphIndex].color.y / 255, sphs[sphIndex].color.z / 255);
-       }
-       else if (sphIndex == -1) {
-           //No sphere
-           found = Color(0, 0, 0);
-       }
-       else
-       {
-           found = sphs[sphIndex].color;
-           
-           found  = found / 255;
-           /*found.x /= 255;
-           found.y /= 255;
-           found.z /= 255;*/
+        if (sphIndex == 9) {
+            //Light sphere
+            L = Color(sphs[sphIndex].color.x / 255, sphs[sphIndex].color.y / 255, sphs[sphIndex].color.z / 255);
+        }
 
 
-           nbBounces++;
-           found = found * colorRetention * diffuseLightTransport(nbBounces, sphIndex, sphs, nbSph, rayIntersec);
-       }
+        if (sphIndex == -1) {
+            //No sphere
+            found = Color(0, 0, 0);
+        }
+        else
+        {
+            found = sphs[sphIndex].color;
+
+            found = found / 255;
+
+            nbBounces++;
+            found = L + found * colorRetention * diffuseLightTransport(nbBounces, sphIndex, sphs, nbSph, rayIntersec);
+        }
 
 
-       avgX += found.x;
-       avgY += found.y;
-       avgZ += found.z;
+        avgX += found.x;
+        avgY += found.y;
+        avgZ += found.z;
 
     }
 
@@ -345,6 +394,66 @@ Color diffuseLightTransport(int nbBounces,int sphIndex, Sphere* sphs, int nbSph,
     Color average(avgX, avgY, avgZ);
 
     return average;
+
+}
+
+Color mirrorLightTransport(Light* LSource, int nbLights, int sphIndex, Sphere* sphs, int nbSph, Vector3 rayIntersec, Vector3 rayDir) {
+
+    Vector3 N = (rayIntersec - sphs[sphIndex].origin).Normalized();
+    float b = Vector3::Dot(rayDir, N);
+    Vector3 reflectedRayDir = reflect(sphIndex, sphs, rayIntersec, rayDir);
+
+    float epsilon = 1;
+    Vector3 rayOrigin = rayIntersec + N * epsilon;
+
+    Ray reflectedRay(rayOrigin, reflectedRayDir);
+    float min = 9999999999999;
+
+    int foundSphere = getClosestSphere(&min, reflectedRay, sphs, nbSph - 1);
+    //Color foundColor = Color::Black;
+    Color foundColor = Color(255, 20, 147);
+
+    if (foundSphere != -1)
+    {
+
+        rayIntersec = rayOrigin + reflectedRayDir * min;
+
+        foundColor = directLightTransport(LSource, nbLights, foundSphere, sphs, nbSph, rayIntersec);
+
+    }
+
+
+    return foundColor;
+}
+
+Color dielectricsLightTransport(Light* LSource, int nbLights, int sphIndex, Sphere* sphs, int nbSph, Vector3 rayIntersec, Vector3 rayDir) {
+    //randomly choosing between reflection and refraction,
+
+    Vector3 N = (rayIntersec - sphs[sphIndex].origin).Normalized();
+    float b = Vector3::Dot(rayDir, N);
+    Vector3 reflectedRayDir = refract(1, 1.7, sphIndex, sphs, rayIntersec, rayDir);
+
+    float epsilon = 1;
+    Vector3 rayOrigin = rayIntersec + N * epsilon;
+
+    Ray reflectedRay(rayOrigin, reflectedRayDir);
+    float min = 9999999999999;
+
+    int foundSphere = getClosestSphere(&min, reflectedRay, sphs, nbSph - 1);
+    //Color foundColor = Color::Black;
+    Color foundColor = Color(255, 20, 147);
+
+    if (foundSphere != -1)
+    {
+
+        rayIntersec = rayOrigin + reflectedRayDir * min;
+
+        foundColor = directLightTransport(LSource, nbLights, foundSphere, sphs, nbSph, rayIntersec);
+
+    }
+
+
+    return foundColor;
 
 }
 
@@ -399,13 +508,13 @@ Color diffuseLightTransportOld(int nbBounces, int sphIndex, Sphere* sphs, int nb
     {
 
         rayIntersec = bounceRay.origin + bounceRay.direction * min;
-     
+
 
         nbBounces++;
-        return result * colorRetention * diffuseLightTransport(nbBounces,sphIndex, sphs, nbSph, rayIntersec );
+        return result * colorRetention * diffuseLightTransport(nbBounces, sphIndex, sphs, nbSph, rayIntersec);
     }
 
-    
+
 }
 
 int main()
@@ -421,20 +530,20 @@ int main()
         }
     }
 
-    Sphere CenterSphere(Vector3(w / 2, h / 2, 1300), 100, Color::White);
-    Sphere CenterDownSphere(Vector3(w / 2, h / 2 + 250, 1300), 100, Color(255, 215, 0, 1), true);
-    Sphere bSphere(Vector3(200, 300, 1500), 150, Color::Blue,true);
-    Sphere cSphere(Vector3(800, 800, 1400), 70, Color::Green);
+    Sphere CenterSphere(Vector3(w / 2, h / 2, 1300), 100, Color::White, MIRROR);
+    Sphere CenterDownSphere(Vector3(w / 2, h / 2 + 250, 1300), 100, Color(255, 215, 0, 1), DIFFUSE);
+    Sphere bSphere(Vector3(200, 300, 1500), 150, Color::Blue, DIFFUSE);
+    Sphere cSphere(Vector3(800, 800, 1400), 70, Color::Green, DIFFUSE);
 
-    Sphere backGround(Vector3(w / 2, h / 2, 3100), 1600, Color(192, 192, 192));
-    Sphere floor(Vector3(w / 2, h + 1600, 2100), 1600, Color(75, 0, 130));
-    Sphere ceiling(Vector3(w / 2, -1600, 2100), 1600, Color(230, 230, 250));
-    Sphere RWall(Vector3(w + 1600, h / 2, 2100), 1600, Color(0, 206, 209),true);
-    Sphere LWall(Vector3(-1600, h / 2, 2100), 1600, Color(0, 206, 209));
+    Sphere backGround(Vector3(w / 2, h / 2, 3100), 1600, Color(192, 192, 192), DIFFUSE);
+    Sphere floor(Vector3(w / 2, h + 1600, 2100), 1600, Color(75, 0, 130), DIFFUSE);
+    Sphere ceiling(Vector3(w / 2, -1600, 2100), 1600, Color(230, 230, 250), DIFFUSE);
+    Sphere RWall(Vector3(w + 1600, h / 2, 2100), 1600, Color(0, 206, 209), DIFFUSE);
+    Sphere LWall(Vector3(-1600, h / 2, 2100), 1600, Color(0, 206, 209), DIFFUSE);
 
-    Sphere noPointLight(Vector3(w / 2 -300, h / 2 +300 , 1300), 180, Color::White, false, true);
+    Sphere noPointLight(Vector3(w / 2 - 300, h / 2 + 200, 1300), 180, Color::White, DEFAULT, true);
 
-    Sphere spheres[] = { CenterSphere, CenterDownSphere, bSphere, cSphere, backGround ,ceiling, floor , RWall,LWall, noPointLight };
+    Sphere spheres[] = { CenterSphere, CenterDownSphere, bSphere, cSphere, backGround ,ceiling, floor , RWall,LWall , noPointLight};
     int nbSpheres = 10;
 
 
@@ -443,7 +552,7 @@ int main()
     Light cLight(Vector3(w - 10, h - 10, 1100), Color::White, 500);
     Light dLight(Vector3(100, h, 1450), Color::White, 500);
 
-    Light lights[] = { aLight, cLight /*,  dLight */};
+    Light lights[] = { aLight, cLight /*,  dLight */ };
     int nbLights = 2;
 
     float maxD = 3100;
@@ -486,17 +595,32 @@ int main()
 
                 Vector3 rayIntersec = aRay.origin + aRay.direction * t;
 
-                if (spheres[sphereIndex].Diffuse) {
-                    int nbBounces = 0;
-
-                    sampleColor = diffuseLightTransport(nbBounces ,sphereIndex, spheres, nbSpheres, rayIntersec);
-
+                int nbBounces = 0;
+                switch (spheres[sphereIndex].mat)
+                {
+                case DIFFUSE:
+                    sampleColor = diffuseLightTransport(nbBounces, sphereIndex, spheres, nbSpheres, rayIntersec);
                     //careful value should be 0-1 re convert to 255
                     sampleColor = sampleColor * 255;
+                    break;
 
-                }
-                else
-                {
+                case MIRROR:
+
+                    spheres[sphereIndex].color = mirrorLightTransport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec, aRay.direction);
+                    sampleColor = directLightTransport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec);
+                    break;
+
+                case DIELECTRIC:
+
+                    //spheres[sphereIndex].color = mirrorLightTransport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec, aRay.direction);
+                    //sampleColor = directLightTransport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec);
+
+                    sampleColor = dielectricsLightTransport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec, aRay.direction);
+                    break;
+
+
+                default:
+
                     if (spheres[sphereIndex].isLight)
                     {
                         sampleColor = spheres[sphereIndex].color;
@@ -504,8 +628,10 @@ int main()
                     else {
                         sampleColor = directLightTransport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec);
                     }
-                   
+                    break;
                 }
+
+
 
 
                 avgX += sampleColor.x;
@@ -537,9 +663,10 @@ int main()
 
     //img.WriteImage("C:\\Dev");
 
-        
     img.WriteImage("C:\\Users\\jlarmat\\Pictures\\Test");
+    //img.WriteImage("C:\\Dev");
 
     std::cout << "DONE !";
 
 }
+
