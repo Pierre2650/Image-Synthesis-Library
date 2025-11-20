@@ -17,14 +17,25 @@ enum  Material {
     DIELECTRIC
 };
 
-class Sphere
-{
+
+
+class Shape {
 public:
     Vector3 origin;
-    float rayon;
     Color color;
     Material mat;
     bool isLight;
+    virtual ~Shape() = default;
+    virtual float rayIntersection(const Ray& ray ) const = 0;
+    virtual Vector3 getNormalToSurface(const Vector3& rayIntersec) const = 0;
+
+};
+
+class Sphere : public Shape
+{
+public:
+
+    float rayon;
 
     Sphere(Vector3 origine, float rayon, Color col) {
         this->origin = origine;
@@ -32,7 +43,6 @@ public:
         this->color = col;
         this->mat = DEFAULT;
         this->isLight = false;
-
     }
 
     Sphere(Vector3 origine, float rayon, Color col, Material Material) {
@@ -51,30 +61,122 @@ public:
         this->isLight = isLight;
     }
 
+    float rayIntersection(const Ray& ray) const override {
+
+        //Analytic sol
+
+        // Sphere equation:
+        // x^2 + y^2 + z^2 = R^2
+        // P^2 - R^2 = 0  || P(x,y,z) Implicit function, implicit shape
+        // SO beacause the point is intersected by the ray we can replace P -> O+tD, O = Ray origin , D = ray Dir
+        // (O+tD)^2 - R^2 = 0
+        // O^2 + 2ODt + Dt^2 - R^2 = 0   =>   Dt^2 + 2ODt + (O^2 - R^2)
+        // Polynome de 2nd degree  ax^2 + bx + c = 0   , a = D   t = x
+        // When delta > 0 => smalles or positive solution, When delta < 0 ray does not intersect
+
+        float t = 0;
+
+        Vector3 oc = ray.origin - this->origin;
+
+        float a = Vector3::Dot(ray.direction, ray.direction);
+        /*float b = 2 * Vector3::Dot(ray.origin, ray.direction);
+        float c = Vector3::Dot(ray.origin, ray.origin) - sph.rayon * sph.rayon;*/
+
+        float b = 2 * Vector3::Dot(oc, ray.direction);
+        float c = Vector3::Dot(oc, oc) - this->rayon * this->rayon;
+
+        float delta = (b * b) - 4 * (a * c);
+
+        if (delta < 0)
+        {
+            //return Vector3::NaN;
+            return NAN;
+        }
+        else
+        {
+            float t1 = (-b - std::sqrt(delta)) / (2 * a);
+            float t2 = (-b + std::sqrt(delta)) / (2 * a);
+
+            if (t1 < t2)
+            {
+                t = t1;
+            }
+            else {
+                t = t2;
+            }
+        }
+
+        if (t < 0)
+        {
+            //return  Vector3::NaN;
+            return NAN;
+
+        }
+        else {
+            //return  ray.origin + ray.direction * t;
+
+            return t;
+        }
+    
+    }
+
+    Vector3 getNormalToSurface(const Vector3& rayIntersec) const override {
+        Vector3 N = (rayIntersec - this->origin).Normalized();
+        return N;
+    }
+
 };
 
 
 
-class Plane {
+class Plane : public Shape {
 public:
-    Vector3 origin;
     Vector3 normal;
 
-    Plane(Vector3 origin , Vector3 n) {
+    Plane(Vector3 origin , Vector3 n , Color color) {
         this->origin = origin;
         this->normal = n.Normalized();
+        this->color = color;
+        this->mat = DEFAULT;
+        this->isLight = false;
+    }
+
+    float rayIntersection(const Ray& ray) const override {
+        
+        float t = NAN;
+        float denominator = Vector3::Dot(ray.direction, this->normal);
+
+        if (denominator > 1e-6) {
+            float nominator = Vector3::Dot((this->origin - ray.origin), this->normal);
+            t = nominator / denominator;
+
+            if (t < 0)
+            {
+                t = NAN;
+            }
+
+        }
+
+        return t;
+    }
+
+    Vector3 getNormalToSurface(const Vector3& rayIntersec) const override {
+        return this->normal;
     }
 };
 
-class Triangle {
+class Triangle : public Shape {
 public:
     Vector3 v1, v2, v3;
    // Plane plane;
 
-    Triangle(Vector3 v1, Vector3 v2, Vector3 v3) {
+    Triangle(Vector3 v1, Vector3 v2, Vector3 v3 , Color color) {
         this->v1 = v1;
         this->v2 = v2;
         this->v2 = v3;
+        this->color = color;
+        this->mat = DEFAULT;
+        this->isLight = false;
         //this->plane = plane;
     }
 
@@ -95,23 +197,21 @@ public:
 };
 
 
-Vector3 reflect(int sphIndex, Sphere* sphs, Vector3 rayIntersec, Vector3 rayDir) {
+Vector3 reflect(Vector3 N, Vector3 rayDir) {
 
-    Vector3 N = (rayIntersec - sphs[sphIndex].origin).Normalized();
     float b = Vector3::Dot(rayDir, N);
     Vector3 reflectedRayDir = rayDir - (2 * b) * N;
     return reflectedRayDir;
 }
 
-Vector3 refract(float n, float nP, int sphIndex, Sphere* sphs, Vector3 rayIntersec, Vector3 rayDir) {
+Vector3 refract(float n, float nP, Vector3 Normal, Vector3 rayDir) {
     //η = index of refraction of material the ray was previously in
     // η' = index of refraction of the new material
 
-    Vector3 N = (rayIntersec - sphs[sphIndex].origin).Normalized();
     float theta;
 
-    Vector3 Rpperpandicular = (n / nP) * (rayDir - (Vector3::Dot(rayDir, N) * N));
-    Vector3 Rpparallel = -N * (std::sqrt(1 - Rpperpandicular.Magnitude() * Rpperpandicular.Magnitude()));
+    Vector3 Rpperpandicular = (n / nP) * (rayDir - (Vector3::Dot(rayDir, Normal) * Normal));
+    Vector3 Rpparallel = -Normal * (std::sqrt(1 - Rpperpandicular.Magnitude() * Rpperpandicular.Magnitude()));
 
     Vector3 Rp = Rpperpandicular + Rpparallel;
 
@@ -156,7 +256,7 @@ Vector3 randomVectorRejectionMethod() {
     }
 }
 
-float CalculateRayPlaneIntersection(Ray ray, Plane pl) {
+/*float CalculateRayPlaneIntersection(Ray ray, Plane pl) {
     float t = NAN;
     float denominator = Vector3::Dot(ray.direction, pl.normal);
 
@@ -173,8 +273,9 @@ float CalculateRayPlaneIntersection(Ray ray, Plane pl) {
 
     return t;
 }
+*/
 
-float CalculateRaySphereIntersection(Ray ray, Sphere sph) {
+/* float CalculateRaySphereIntersection(Ray ray, Sphere sph) {
 
     //Analytic sol
 
@@ -192,8 +293,8 @@ float CalculateRaySphereIntersection(Ray ray, Sphere sph) {
     Vector3 oc = ray.origin - sph.origin;
 
     float a = Vector3::Dot(ray.direction, ray.direction);
-    /*float b = 2 * Vector3::Dot(ray.origin, ray.direction);
-    float c = Vector3::Dot(ray.origin, ray.origin) - sph.rayon * sph.rayon;*/
+    //float b = 2 * Vector3::Dot(ray.origin, ray.direction);
+    //float c = Vector3::Dot(ray.origin, ray.origin) - sph.rayon * sph.rayon;
 
     float b = 2 * Vector3::Dot(oc, ray.direction);
     float c = Vector3::Dot(oc, oc) - sph.rayon * sph.rayon;
@@ -231,16 +332,19 @@ float CalculateRaySphereIntersection(Ray ray, Sphere sph) {
         return t;
     }
 
-}
+}*/
 
-int getClosestSphere(float* min, Ray sampleRay, Sphere* sphs, int nbSpheres) {
+int getClosestShape(float* min, Ray sampleRay, Shape** shapes, int nbShapes) {
 
     float t = 0;
     int result = -1;
 
-    for (int k = 0; k < nbSpheres; k++)
+    for (int k = 0; k < nbShapes; k++)
     {
-        if (!std::isnan(t = CalculateRaySphereIntersection(sampleRay, sphs[k])))
+
+        t = shapes[k]->rayIntersection(sampleRay);
+
+        if (!std::isnan(t))
         {
             if (t < *min) {
                 *min = t;
@@ -264,7 +368,7 @@ float toneMap(float t, float maxD) {
 }
 
 
-Color directLightTransport(Light* LSource, int nbLights, int sphIndex, Sphere* sphs, int nbSph, Vector3 rayIntersec) {
+Color directLightTransport(Light* LSource, int nbLights, int shpIndex, Shape** shapes, int nbShp, Vector3 rayIntersec) {
 
     // L_o = L_e + V(P, L_p) * L_emit / D ^ 2 * Albedo * | N . L_i |
      // L_o --> light form surface
@@ -280,10 +384,10 @@ Color directLightTransport(Light* LSource, int nbLights, int sphIndex, Sphere* s
      //intersection P->O + tD
 
 
-    Vector3 N = (rayIntersec - sphs[sphIndex].origin).Normalized();
+    Vector3 N = shapes[shpIndex]->getNormalToSurface(rayIntersec);
     Vector3 calculation(Vector3::Zero);
     Vector3 L_e = Vector3::Zero; // light emited by the object?
-    Color albedo = sphs[sphIndex].color;
+    Color albedo = shapes[shpIndex]->color;
 
 
     for (int i = 0; i < nbLights; i++) {
@@ -292,11 +396,13 @@ Color directLightTransport(Light* LSource, int nbLights, int sphIndex, Sphere* s
         Ray toLight(rayIntersec, L_i);
         float Test = 0;
 
-        for (int k = 0; k < nbSph; k++) {
+        for (int k = 0; k < nbShp; k++) {
 
-            if (k == sphIndex) { continue; }
+            if (k == shpIndex) { continue; }
 
-            if (!std::isnan(Test = CalculateRaySphereIntersection(toLight, sphs[k]))) {
+            Test = shapes[k]->rayIntersection(toLight);
+
+            if (!std::isnan(Test)) {
 
                 V = 0.0f;
                 break;
@@ -328,21 +434,21 @@ Color directLightTransport(Light* LSource, int nbLights, int sphIndex, Sphere* s
 }
 
 
-Color diffuseLightTransport(int nbBounces, int sphIndex, Sphere* sphs, int nbSph, Vector3 rayIntersec) {
+Color diffuseLightTransport(int nbBounces, int shpIndex, Shape** shapes, int nbShp, Vector3 rayIntersec) {
 
-    if (nbBounces >= 5) {
+    if (nbBounces >= 3) {
 
         return Color::Black;
     }
 
-    Vector3 N = (rayIntersec - sphs[sphIndex].origin).Normalized();
+    Vector3 N = shapes[shpIndex]->getNormalToSurface(rayIntersec);
     //float epsilon = 0.001;
     float epsilon = 1;
     Vector3 rayOrigin = rayIntersec + N * epsilon;
 
-    const int nbSamples = 8;
+    const int nbSamples = 5;
     Color result = Color::Black;
-    Color L = Color::Black;
+    //Color L = Color::Black;
     float colorRetention = 1;
     float avgX = 0, avgY = 0, avgZ = 0;
     for (int i = 0; i < nbSamples; i++)
@@ -355,28 +461,30 @@ Color diffuseLightTransport(int nbBounces, int sphIndex, Sphere* sphs, int nbSph
         Ray sampleRay(rayOrigin, randomDir);
 
         float min = 9999999999999;
-        // int sphereIndex 
-        sphIndex = getClosestSphere(&min, sampleRay, sphs, nbSph);
+        int newShapeIndex = 0;
+
+        newShapeIndex = getClosestShape(&min, sampleRay, shapes, nbShp);
         Color found = Color::Black;
 
-        if (sphIndex == 9) {
-            //Light sphere
-            L = Color(sphs[sphIndex].color.x / 255, sphs[sphIndex].color.y / 255, sphs[sphIndex].color.z / 255);
-        }
+        
 
-
-        if (sphIndex == -1) {
+        if (newShapeIndex == -1) {
             //No sphere
             found = Color(0, 0, 0);
         }
+        else if (shapes[newShapeIndex]->isLight) {
+            //Light sphere
+            found = Color(shapes[newShapeIndex]->color.x / 255, shapes[newShapeIndex]->color.y / 255, shapes[newShapeIndex]->color.z / 255);
+        }
         else
         {
-            found = sphs[sphIndex].color;
+            found = shapes[newShapeIndex]->color;
 
             found = found / 255;
 
-            nbBounces++;
-            found = L + found * colorRetention * diffuseLightTransport(nbBounces, sphIndex, sphs, nbSph, rayIntersec);
+            //nbBounces++;
+            Vector3 newIntersec = rayOrigin + randomDir * min;
+            found = found * colorRetention * diffuseLightTransport(nbBounces+1, newShapeIndex, shapes, nbShp, newIntersec);
         }
 
 
@@ -397,11 +505,11 @@ Color diffuseLightTransport(int nbBounces, int sphIndex, Sphere* sphs, int nbSph
 
 }
 
-Color mirrorLightTransport(Light* LSource, int nbLights, int sphIndex, Sphere* sphs, int nbSph, Vector3 rayIntersec, Vector3 rayDir) {
+Color mirrorLightTransport(Light* LSource, int nbLights, int shpIndex, Shape** shapes, int nbShp, Vector3 rayIntersec, Vector3 rayDir) {
 
-    Vector3 N = (rayIntersec - sphs[sphIndex].origin).Normalized();
+    Vector3 N = shapes[shpIndex]->getNormalToSurface(rayIntersec);
     float b = Vector3::Dot(rayDir, N);
-    Vector3 reflectedRayDir = reflect(sphIndex, sphs, rayIntersec, rayDir);
+    Vector3 reflectedRayDir = reflect(N, rayDir);
 
     float epsilon = 1;
     Vector3 rayOrigin = rayIntersec + N * epsilon;
@@ -409,7 +517,7 @@ Color mirrorLightTransport(Light* LSource, int nbLights, int sphIndex, Sphere* s
     Ray reflectedRay(rayOrigin, reflectedRayDir);
     float min = 9999999999999;
 
-    int foundSphere = getClosestSphere(&min, reflectedRay, sphs, nbSph - 1);
+    int foundSphere = getClosestShape(&min, reflectedRay, shapes, nbShp - 1);
     //Color foundColor = Color::Black;
     Color foundColor = Color(255, 20, 147);
 
@@ -418,7 +526,7 @@ Color mirrorLightTransport(Light* LSource, int nbLights, int sphIndex, Sphere* s
 
         rayIntersec = rayOrigin + reflectedRayDir * min;
 
-        foundColor = directLightTransport(LSource, nbLights, foundSphere, sphs, nbSph, rayIntersec);
+        foundColor = directLightTransport(LSource, nbLights, foundSphere, shapes, nbShp, rayIntersec);
 
     }
 
@@ -426,12 +534,12 @@ Color mirrorLightTransport(Light* LSource, int nbLights, int sphIndex, Sphere* s
     return foundColor;
 }
 
-Color dielectricsLightTransport(Light* LSource, int nbLights, int sphIndex, Sphere* sphs, int nbSph, Vector3 rayIntersec, Vector3 rayDir) {
+Color dielectricsLightTransport(Light* LSource, int nbLights, int shpIndex, Shape** shapes, int nbShp, Vector3 rayIntersec, Vector3 rayDir) {
     //randomly choosing between reflection and refraction,
 
-    Vector3 N = (rayIntersec - sphs[sphIndex].origin).Normalized();
+    Vector3 N = shapes[shpIndex]->getNormalToSurface(rayIntersec);
     float b = Vector3::Dot(rayDir, N);
-    Vector3 reflectedRayDir = refract(1, 1.7, sphIndex, sphs, rayIntersec, rayDir);
+    Vector3 reflectedRayDir = refract(1, 1.7, N, rayDir);
 
     float epsilon = 1;
     Vector3 rayOrigin = rayIntersec + N * epsilon;
@@ -439,7 +547,7 @@ Color dielectricsLightTransport(Light* LSource, int nbLights, int sphIndex, Sphe
     Ray reflectedRay(rayOrigin, reflectedRayDir);
     float min = 9999999999999;
 
-    int foundSphere = getClosestSphere(&min, reflectedRay, sphs, nbSph - 1);
+    int foundSphere = getClosestShape(&min, reflectedRay, shapes, nbShp - 1);
     //Color foundColor = Color::Black;
     Color foundColor = Color(255, 20, 147);
 
@@ -448,7 +556,7 @@ Color dielectricsLightTransport(Light* LSource, int nbLights, int sphIndex, Sphe
 
         rayIntersec = rayOrigin + reflectedRayDir * min;
 
-        foundColor = directLightTransport(LSource, nbLights, foundSphere, sphs, nbSph, rayIntersec);
+        foundColor = directLightTransport(LSource, nbLights, foundSphere, shapes, nbShp, rayIntersec);
 
     }
 
@@ -457,65 +565,6 @@ Color dielectricsLightTransport(Light* LSource, int nbLights, int sphIndex, Sphe
 
 }
 
-Color diffuseLightTransportOld(int nbBounces, int sphIndex, Sphere* sphs, int nbSph, Vector3 rayIntersec) {
-
-
-    Vector3 N = (rayIntersec - sphs[sphIndex].origin).Normalized();
-    //float epsilon = 0.001;
-    float epsilon = 0.5;
-    Vector3 rayOrigin = rayIntersec + N * epsilon;
-
-    Vector3 randomDir = randomVectorRejectionMethod();
-    if (Vector3::Dot(randomDir, N) < 0.0) { // Not in the same hemisphere as the normal
-        randomDir = -randomDir;
-    }
-
-    Ray bounceRay(rayOrigin, randomDir);
-
-
-    float colorRetention = 1;
-    Color result = Color::Black;
-    float min = 9999999999999;
-    sphIndex = getClosestSphere(&min, bounceRay, sphs, nbSph);
-
-    if (sphIndex == 9) {
-        nbBounces++;
-        Color light(sphs[sphIndex].color.x / 255, sphs[sphIndex].color.y / 255, sphs[sphIndex].color.z / 255);
-        return light;
-    }
-
-    if (sphIndex == -1) {
-        //std::cout << "No sphere hit" << std::endl;
-        //return Color::Black;
-        nbBounces++;
-        Color blackNormalize(0.1, 0.1, 0.1);
-        return blackNormalize;
-    }
-
-    Sphere reflection = sphs[sphIndex];
-    Vector3 newRayIntersec = bounceRay.origin + bounceRay.direction * min;
-
-
-    result.x /= 255;
-    result.y /= 255;
-    result.z /= 255;
-
-    if (nbBounces >= 10) {
-
-        return result;
-    }
-    else
-    {
-
-        rayIntersec = bounceRay.origin + bounceRay.direction * min;
-
-
-        nbBounces++;
-        return result * colorRetention * diffuseLightTransport(nbBounces, sphIndex, sphs, nbSph, rayIntersec);
-    }
-
-
-}
 
 int main()
 {
@@ -530,10 +579,12 @@ int main()
         }
     }
 
+
+    // ----------------- SHAPES ----------------------------//
     Sphere CenterSphere(Vector3(w / 2, h / 2, 1300), 100, Color::White, MIRROR);
     Sphere CenterDownSphere(Vector3(w / 2, h / 2 + 250, 1300), 100, Color(255, 215, 0, 1), DIFFUSE);
     Sphere bSphere(Vector3(200, 300, 1500), 150, Color::Blue, DIFFUSE);
-    Sphere cSphere(Vector3(800, 800, 1400), 70, Color::Green, DIFFUSE);
+    Sphere cSphere(Vector3(800, 800, 1400), 70, Color::Green);
 
     Sphere backGround(Vector3(w / 2, h / 2, 3100), 1600, Color(192, 192, 192), DIFFUSE);
     Sphere floor(Vector3(w / 2, h + 1600, 2100), 1600, Color(75, 0, 130), DIFFUSE);
@@ -541,11 +592,19 @@ int main()
     Sphere RWall(Vector3(w + 1600, h / 2, 2100), 1600, Color(0, 206, 209), DIFFUSE);
     Sphere LWall(Vector3(-1600, h / 2, 2100), 1600, Color(0, 206, 209), DIFFUSE);
 
-    Sphere noPointLight(Vector3(w / 2 - 300, h / 2 + 200, 1300), 180, Color::White, DEFAULT, true);
+    //Sphere noPointLight(Vector3(w / 2 - 300, h / 2 + 200, 1300), 180, Color::White, DEFAULT, true);
 
-    Sphere spheres[] = { CenterSphere, CenterDownSphere, bSphere, cSphere, backGround ,ceiling, floor , RWall,LWall , noPointLight};
-    int nbSpheres = 10;
+    Sphere noPointLight(Vector3(w / 2, h / 2, 1300), 180, Color::White, DEFAULT, true);
 
+    //Sphere spheres[] = { CenterSphere, CenterDownSphere, bSphere, cSphere, backGround ,ceiling, floor , RWall,LWall , noPointLight};
+    //int nbSpheres = 10;
+
+    Plane centerPlane(Vector3(w / 2, h / 2, 1300), Vector3(10, 20, 30), Color::White);
+
+    Shape* shapes[] = { &CenterSphere, &CenterDownSphere, &bSphere, &cSphere, /*&centerPlane ,*/ &backGround ,&ceiling, &floor , &RWall,&LWall , &noPointLight};
+    int nbShapes = 10;
+    
+    // ----------------- SHAPES ----------------------------//
 
     Light aLight(Vector3(w / 2, h / 2 + 60, 1000), Color::White, 1000);
     Light bLight(Vector3(10, 10, 1300), Color::White, 500);
@@ -572,7 +631,7 @@ int main()
 
 
             float avgX = 0, avgY = 0, avgZ = 0;
-            int sphereIndex = 0;
+            int shapeIndex = 0;
 
             for (int s = 0; s < nbSamples; s++)
             {
@@ -587,8 +646,8 @@ int main()
 
                 //Closes sphere calculation
                 float t = 99999999999;
-                sphereIndex = getClosestSphere(&t, aRay, spheres, nbSpheres);
-                if (sphereIndex == -1) {
+                shapeIndex = getClosestShape(&t, aRay, shapes, nbShapes);
+                if (shapeIndex == -1) {
                     std::cout << "No sphere hit" << std::endl;
                     continue;
                 }
@@ -596,39 +655,38 @@ int main()
                 Vector3 rayIntersec = aRay.origin + aRay.direction * t;
 
                 int nbBounces = 0;
-                switch (spheres[sphereIndex].mat)
+
+
+                switch (shapes[shapeIndex]->mat)
                 {
-                case DIFFUSE:
-                    sampleColor = diffuseLightTransport(nbBounces, sphereIndex, spheres, nbSpheres, rayIntersec);
-                    //careful value should be 0-1 re convert to 255
-                    sampleColor = sampleColor * 255;
-                    break;
+                    case DIFFUSE:
+                        sampleColor = diffuseLightTransport(nbBounces, shapeIndex, shapes, nbShapes, rayIntersec);
+                        //careful value should be 0-1 re convert to 255
+                        sampleColor = sampleColor * 255;
+                        break;
 
-                case MIRROR:
+                    case MIRROR:
 
-                    spheres[sphereIndex].color = mirrorLightTransport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec, aRay.direction);
-                    sampleColor = directLightTransport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec);
-                    break;
+                        shapes[shapeIndex]->color = mirrorLightTransport(lights, nbLights, shapeIndex, shapes, nbShapes, rayIntersec, aRay.direction);
+                        sampleColor = directLightTransport(lights, nbLights, shapeIndex, shapes, nbShapes, rayIntersec);
+                        break;
 
-                case DIELECTRIC:
-
-                    //spheres[sphereIndex].color = mirrorLightTransport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec, aRay.direction);
-                    //sampleColor = directLightTransport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec);
-
-                    sampleColor = dielectricsLightTransport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec, aRay.direction);
-                    break;
+                    case DIELECTRIC:
+   
+                        sampleColor = dielectricsLightTransport(lights, nbLights, shapeIndex, shapes, nbShapes, rayIntersec, aRay.direction);
+                        break;
 
 
-                default:
+                    default:
 
-                    if (spheres[sphereIndex].isLight)
-                    {
-                        sampleColor = spheres[sphereIndex].color;
-                    }
-                    else {
-                        sampleColor = directLightTransport(lights, nbLights, sphereIndex, spheres, nbSpheres, rayIntersec);
-                    }
-                    break;
+                        if (shapes[shapeIndex]->isLight)
+                        {
+                            sampleColor = shapes[shapeIndex]->color;
+                        }
+                        else {
+                            sampleColor = directLightTransport(lights, nbLights, shapeIndex, shapes, nbShapes, rayIntersec);
+                        }
+                        break;
                 }
 
 
