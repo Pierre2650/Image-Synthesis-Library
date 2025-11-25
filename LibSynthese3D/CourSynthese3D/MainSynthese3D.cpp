@@ -2,3 +2,4 @@
 #include "pch.h"
 #include "Synthese3D.h"
 #include "Image.h"
+#include "tiny_obj_loader.h"

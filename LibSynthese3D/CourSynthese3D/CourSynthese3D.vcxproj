@@ -139,6 +139,7 @@
     <ClInclude Include="Image.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Synthese3D.h" />
+    <ClInclude Include="tiny_obj_loader.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Image.cpp" />
