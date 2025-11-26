@@ -1,16 +1,17 @@
 // Test_Lib_Synthese3D.cpp : Ce fichier contient la fonction 'main'. L'exécution du programme commence et se termine à cet endroit.
 //
 
-
+//
 #include <iostream>
 #include <cstdlib>
 #include <vector>
 #include "Synthese3D.h" // personal library of vectors , colors, ray 
 #include "Image.h" // personal library of images
+#define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
 #include "tiny_obj_loader.h"
 #include <cmath>
 
-#define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
+//#define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
 
 enum  Material {
     DEFAULT,
@@ -196,7 +197,7 @@ public:
 
         float inv_det = 1 / determinant;
 
-        Vector3 v1ToRayO =  ray.origin - this->v1;
+        Vector3 v1ToRayO = ray.origin - this->v1;
         float u = Vector3::Dot(v1ToRayO, crossRayE2) * inv_det;
         if (u < 0 || u > 1) { return NAN; }
 
@@ -208,7 +209,7 @@ public:
 
         float t = Vector3::Dot(e2, crossv1ToRay0E1) * inv_det;
 
-        if (t<0)
+        if (t < 0)
         {
             return NAN;
         }
@@ -728,8 +729,9 @@ void readOBJ(std::string fileName, std::vector<Shape*>& myShapes) {
     std::vector<Triangle> triangles;
 
     tinyobj::ObjReader reader;
+    tinyobj::ObjReaderConfig reader_config;
 
-    if (!reader.ParseFromFile(fileName)) {
+    if (!reader.ParseFromFile(fileName, reader_config)) {
         if (!reader.Error().empty()) {
             std::cerr << "TinyObjReader: " << reader.Error();
         }
@@ -743,6 +745,9 @@ void readOBJ(std::string fileName, std::vector<Shape*>& myShapes) {
     auto& attrib = reader.GetAttrib();
     auto& shapes = reader.GetShapes();
 
+    int w = 1000, h = 1000;
+    Vector3 basePos(w / 2, h / 2 + 60, 1000);
+
     for (size_t s = 0; s < shapes.size(); s++) {
         // Loop over faces(polygon)
         size_t index_offset = 0;
@@ -751,7 +756,7 @@ void readOBJ(std::string fileName, std::vector<Shape*>& myShapes) {
 
             // Loop over vertices in the face.
             if (fv > 3) { continue; }
-            
+
             std::vector<Vector3> triVertices;
             for (size_t v = 0; v < fv; v++) {
                 // access to vertex
@@ -760,10 +765,11 @@ void readOBJ(std::string fileName, std::vector<Shape*>& myShapes) {
                 tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
                 tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
 
-                triVertices.push_back(Vector3(vx,vy,vz));
-                
+                triVertices.push_back(basePos + Vector3(vx, vy, vz));
+
             }
             Triangle tri(triVertices[0], triVertices[1], triVertices[2], Color::Blue);
+            //std::cout << "triVertices[0]= " << triVertices[0] << "triVertices[1] = " << triVertices[1] << "triVertices[2]= " << triVertices[2] << std::endl;
             myShapes.push_back(&tri);
 
             index_offset += fv;
@@ -826,6 +832,8 @@ int main()
     shapes.push_back(&floor);
     shapes.push_back(&RWall);
     shapes.push_back(&LWall);
+
+    readOBJ("C:\\Dev\\suzanne.obj", shapes);
 
 
     // ----------------- SHAPES ----------------------------//
@@ -950,8 +958,8 @@ int main()
 
     Image img(w, h, mat);
 
-    img.WriteImage("C:\\Users\\jlarmat\\Pictures\\Test");
-    //img.WriteImage("C:\\Dev");
+    //img.WriteImage("C:\\Users\\jlarmat\\Pictures\\Test");
+    img.WriteImage("C:\\Dev");
 
     std::cout << "DONE !";
 
