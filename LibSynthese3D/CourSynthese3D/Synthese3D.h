@@ -34,6 +34,7 @@ class Vector3 {
 		friend Vector3 operator*(const float& scalar, const Vector3& vec);
 		friend Vector3 operator/(const float& scalar, const Vector3& vec);
 		Vector3& operator+=(const Vector3& other);
+		Vector3& operator-=(const Vector3& other);
 		
 
 	

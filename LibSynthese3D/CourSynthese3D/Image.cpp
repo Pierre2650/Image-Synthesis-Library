@@ -13,17 +13,6 @@
 
 Image::Image( int width, int height, std::vector<std::vector<Color>> Matrix) {
 
-    /*try {
-
-        if (Matrix.size() != height || Matrix[0].size() != width) {
-            throw std::runtime_error("Image Matrix doesnt fit Image resolution");
-        }
-    }
-    catch (const std::runtime_error& e) {
-        std::cout << "Caught a runtime_error: " << e.what() << std::endl;
-        return;
-    }*/
-
 	this->width = width;
 	this->height = height;
     this->Matrix = Matrix;
