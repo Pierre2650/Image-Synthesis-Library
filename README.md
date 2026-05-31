@@ -1,7 +1,8 @@
-# Image Synthesis By Rayracing
+# Image Synthesis By RayTracing
 ## Raytracing Implementation
 C++ Project for a basic raytracing algorithm
 
 ## Description
 
-##  Result
+##  Results
+
