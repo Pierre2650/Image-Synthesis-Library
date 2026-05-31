@@ -1,5 +1,0 @@
-- Lire fichier OBJ
-	-TinyOBJLoader
-
--BoundingBox-> mesh
-	primitive boite 
