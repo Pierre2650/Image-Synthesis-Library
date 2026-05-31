@@ -6,7 +6,7 @@ C++ Project for a basic raytracing algorithm
 
 ##  Results
 ![Parametrage](Images/Ex1.png)
-![Parametrage](Images/Ex3.png)
+![Parametrage](Images/Ex3.jpg)
 ### With Antiliasing 
 ![Parametrage](Images/Antiliasing.png)
 ### Without Antiliasing 
